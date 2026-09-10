@@ -1,0 +1,7 @@
+{
+  "name": "Sistema de Control de Compras - Gerencia de Informática OJ Guatemala",
+  "description": "Sistema de gestión y control de adquisiciones y presupuesto financiero para la Gerencia de Informática del Organismo Judicial de Guatemala, con matriz de disponibilidad presupuestaria, modificaciones, compras, auditoría y control de usuarios.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

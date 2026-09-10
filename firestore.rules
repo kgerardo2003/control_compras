@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    function isValidPurchase(data) {
+      return data.id is string
+        && data.nog is string
+        && data.descripcion is string;
+    }
+
+    function isValidAuditLog(data) {
+      return data.id is string
+        && data.fecha is string
+        && data.usuario is string;
+    }
+
+    // Regla para prueba de conexión
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+
+    // Reglas para Adquisiciones y Procesos de TI
+    match /purchases/{purchaseId} {
+      allow read: if true;
+      allow create, update: if isValidId(purchaseId) && isValidPurchase(request.resource.data);
+      allow delete: if isValidId(purchaseId);
+
+      // Subcolección para adjuntos y documentos digitalizados F56
+      match /attachments/{attachmentId} {
+        allow read, write: if true;
+      }
+    }
+
+    // Reglas para Bitácora de Auditoría (Creación y lectura, inmutable contra borrado accidental)
+    match /audit_logs/{logId} {
+      allow read: if true;
+      allow create: if isValidId(logId) && isValidAuditLog(request.resource.data);
+      allow update, delete: if false; // Inmutable: no se permite alterar ni eliminar bitácora
+    }
+
+    // Reglas para Catálogos Institucionales
+    match /catalogs/{catalogId} {
+      allow read: if true;
+      allow write: if isValidId(catalogId);
+    }
+
+    // Reglas para Directorio de Usuarios
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isValidId(userId);
+    }
+
+    // Reglas para Perfiles y Permisos de Usuarios
+    match /user_profiles/{profileId} {
+      allow read, write: if isValidId(profileId);
+    }
+
+    // Reglas para Renglones Presupuestarios y Matriz de Disponibilidad
+    match /budget_lines/{lineId} {
+      allow read, write: if true;
+    }
+
+    // Reglas para Modificaciones Presupuestarias
+    match /budget_modifications/{modId} {
+      allow read, write: if true;
+    }
+
+    // Default deny all other paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+@theme {
+  --color-persia: #1c39bb;
+  --color-persia-dark: #0d1f4d;
+  --color-persia-light: #3859ea;
+  --color-acero: #4682b4;
+  --color-acero-dark: #2c567a;
+  --color-acero-light: #6a9ec9;
+  --color-acero-tint: #ebf2f8;
+}

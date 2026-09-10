@@ -1,0 +1,113 @@
+{
+  "entities": {
+    "Purchase": {
+      "title": "Purchase",
+      "description": "Expediente o proceso de adquisición de TI registrado en el sistema",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Identificador único o NOG del proceso" },
+        "nog": { "type": "string", "description": "Número de Operación Guatecompras" },
+        "f56": { "type": "string", "description": "Número de Formulario F-56" },
+        "f56e": { "type": "string", "description": "Número de Formulario F-56E" },
+        "descripcion": { "type": "string", "description": "Descripción del bien o servicio" },
+        "monto": { "type": "number", "description": "Monto en Quetzales" },
+        "renglon": { "type": "string", "description": "Renglón presupuestario" },
+        "categoriaTecnologica": { "type": "string", "description": "Categoría tecnológica institucional" },
+        "tipoCompra": { "type": "string", "description": "Modalidad de contratación" },
+        "estatusEvento": { "type": "string", "description": "Estatus actual del evento" },
+        "evaluadoGIT": { "type": "string", "description": "Dictaminado por el Área Técnica Correspondiente (Sí/No)" },
+        "dictamenGIT": { "type": "string", "description": "Número correlativo de dictamen" },
+        "fechaDictamenGIT": { "type": "string", "description": "Fecha del dictamen técnico emitido" },
+        "fechaElaboracionOficioGIT": { "type": "string", "description": "Fecha en que la Gerencia de Informática elaboró el oficio hacia compras" },
+        "dependenciaSolicitante": { "type": "string", "description": "Unidad solicitante del OJ" },
+        "proveedor": { "type": "string", "description": "Proveedor adjudicado" },
+        "fechaSolicitud": { "type": "string", "description": "Fecha de solicitud" },
+        "fechaEvaluacion": { "type": "string", "description": "Fecha de evaluación" },
+        "fechaAdjudicacion": { "type": "string", "description": "Fecha de adjudicación" },
+        "creadoPor": { "type": "string", "description": "Usuario que registró la compra" },
+        "actualizadoEn": { "type": "string", "description": "Fecha de última actualización" }
+      },
+      "required": ["id", "nog", "descripcion", "monto", "estatusEvento"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Registro oficial e inmutable de auditoría de operaciones",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Identificador único de la traza" },
+        "fecha": { "type": "string", "description": "Fecha y hora del evento" },
+        "usuario": { "type": "string", "description": "Usuario responsable" },
+        "rol": { "type": "string", "description": "Rol del usuario en la operación" },
+        "accion": { "type": "string", "description": "Tipo de acción ejecutada" },
+        "modulo": { "type": "string", "description": "Módulo intervenido" },
+        "registroId": { "type": "string", "description": "ID del registro afectado" },
+        "detalles": { "type": "string", "description": "Detalle descriptivo de la operación" },
+        "ip": { "type": "string", "description": "Terminal o IP de origen" }
+      },
+      "required": ["id", "fecha", "usuario", "accion", "modulo", "detalles"]
+    },
+    "Catalog": {
+      "title": "Catalog",
+      "description": "Catálogo dinámico de valores parametrizados",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Clave del catálogo (ej. ESTATUS_EVENTO)" },
+        "nombre": { "type": "string", "description": "Nombre legible del catálogo" },
+        "items": { "type": "array", "description": "Elementos del catálogo" }
+      },
+      "required": ["id", "nombre", "items"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Usuario institucional del sistema",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID o correo del usuario" },
+        "nombre": { "type": "string", "description": "Nombre del funcionario" },
+        "email": { "type": "string", "description": "Correo institucional" },
+        "rol": { "type": "string", "description": "Rol asignado" },
+        "dependencia": { "type": "string", "description": "Unidad de adscripción" },
+        "activo": { "type": "boolean", "description": "Estado activo" },
+        "ultimoAcceso": { "type": "string", "description": "Último acceso" }
+      },
+      "required": ["id", "nombre", "email", "rol"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Perfil de rol y permisos de acceso a módulos del sistema",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID único del perfil" },
+        "codigo": { "type": "string", "description": "Código identificador" },
+        "nombre": { "type": "string", "description": "Nombre legible del perfil" },
+        "descripcion": { "type": "string", "description": "Descripción del perfil" },
+        "modulosPermitidos": { "type": "array", "description": "Lista de módulos habilitados" },
+        "esSistema": { "type": "boolean", "description": "Perfil base protegido" },
+        "activo": { "type": "boolean", "description": "Estado de actividad" }
+      },
+      "required": ["id", "codigo", "nombre", "modulosPermitidos"]
+    }
+  },
+  "firestore": {
+    "/purchases/{purchaseId}": {
+      "schema": "Purchase",
+      "description": "Colección de procesos y compras institucionales en tiempo real"
+    },
+    "/audit_logs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Colección inmutable de bitácora y auditoría"
+    },
+    "/catalogs/{catalogId}": {
+      "schema": "Catalog",
+      "description": "Colección de catálogos configurables"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Directorio de usuarios autorizados del sistema"
+    },
+    "/user_profiles/{profileId}": {
+      "schema": "UserProfile",
+      "description": "Perfiles institucionales y control de acceso a módulos"
+    }
+  }
+}
