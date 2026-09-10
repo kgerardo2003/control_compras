@@ -1651,6 +1651,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     removePurchaseFromFirestore(id).then(res => {
       if (!res.success) {
         console.warn("Aviso Firestore al eliminar compra:", res.error);
+        setPurchases(prevList => [...prevList, prev]);
+        showToast({
+          type: 'error',
+          title: 'Error al Eliminar en Firestore',
+          message: `No se pudo eliminar en Firestore: ${res.error || 'Permiso denegado'}. Verifica las reglas de Firestore.`,
+          duration: 7000
+        });
       }
     });
 
@@ -1678,6 +1685,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     removeBatchPurchasesFromFirestore(ids).then(res => {
       if (!res.success) {
         console.warn("Aviso Firestore al eliminar compras por lote:", res.error);
+        setPurchases(prevList => [...prevList, ...removedPurchases]);
+        showToast({
+          type: 'error',
+          title: 'Error al Eliminar Lote',
+          message: `No se pudo eliminar el lote en Firestore: ${res.error || 'Permiso denegado'}.`,
+          duration: 7000
+        });
       }
     }).catch(err => {
       console.warn("Error eliminando compras masivas en Firestore:", err);
@@ -1733,12 +1747,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAudit('EDITAR_CATALOGO', 'Catálogos', `Actualización de catálogo ID: ${id}`, id, undefined, data);
   };
 
-  const deleteCatalog = (id: string) => {
+  const deleteCatalog = async (id: string) => {
     const cat = catalogs.find(c => c.id === id);
-    if (cat?.esSistema) return; // Proteger catálogos del sistema
+    if (!cat) return;
+    if (cat.esSistema) {
+      showToast({
+        type: 'alerta',
+        title: 'Acción Protegida',
+        message: 'No es posible eliminar catálogos base del sistema.',
+        duration: 4000
+      });
+      return;
+    }
     setCatalogs(prev => prev.filter(c => c.id !== id));
-    removeCatalogFromFirestore(id);
-    logAudit('EDITAR_CATALOGO', 'Catálogos', `Eliminación de catálogo: ${cat?.nombre}`, id);
+    const res = await removeCatalogFromFirestore(id);
+    if (!res.success) {
+      setCatalogs(prev => [...prev, cat]);
+      showToast({
+        type: 'error',
+        title: 'Error al Eliminar Catálogo',
+        message: `No se pudo eliminar en Firestore: ${res.error || 'Permiso denegado'}. Verifica tus reglas de Firebase.`,
+        duration: 6000
+      });
+      return;
+    }
+    showToast({
+      type: 'info',
+      title: 'Catálogo Eliminado',
+      message: `El catálogo "${cat.nombre}" ha sido eliminado permanentemente.`,
+      duration: 3500
+    });
+    logAudit('EDITAR_CATALOGO', 'Catálogos', `Eliminación de catálogo: ${cat.nombre}`, id);
   };
 
   const addCatalogItem = (catalogId: string, item: Omit<CatalogItem, 'id'>) => {
@@ -1834,12 +1873,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   };
 
-  const deleteUser = (id: string) => {
+  const deleteUser = async (id: string) => {
     const user = users.find(u => u.id === id);
-    if (user?.username === 'admin') return; // Proteger superadmin
+    if (!user) return;
+    if (user.username === 'admin') {
+      showToast({
+        type: 'alerta',
+        title: 'Acción Restringida',
+        message: 'No es posible eliminar el usuario administrador principal.',
+        duration: 4000
+      });
+      return;
+    }
+
+    // Actualización inmediata local para UI fluida
     setUsers(prev => prev.filter(u => u.id !== id));
-    removeUserFromFirestore(id);
-    logAudit('EDITAR_USUARIO', 'Usuarios', `Eliminación de usuario: ${user?.username}`, id);
+
+    const res = await removeUserFromFirestore(id);
+    if (!res.success) {
+      console.error("Error eliminando usuario en Firestore:", res.error);
+      // Revertir en local si la nube rechazó la eliminación
+      setUsers(prev => [...prev, user]);
+      showToast({
+        type: 'error',
+        title: 'Error al Eliminar Usuario',
+        message: `No se pudo eliminar en Firestore: ${res.error || 'Permiso denegado'}. Verifica las Reglas en tu Firebase Console.`,
+        duration: 8000
+      });
+      return;
+    }
+
+    showToast({
+      type: 'info',
+      title: 'Usuario Eliminado',
+      message: `El usuario ${user.username} (${user.nombreCompleto}) ha sido eliminado permanentemente.`,
+      duration: 3500
+    });
+    logAudit('EDITAR_USUARIO', 'Usuarios', `Eliminación de usuario: ${user.username}`, id);
   };
 
   // Perfiles de Usuario CRUD y Control de Acceso
@@ -1877,7 +1947,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const deleteUserProfile = (id: string) => {
+  const deleteUserProfile = async (id: string) => {
     const profile = userProfiles.find(p => p.id === id);
     if (!profile) return;
     if (profile.esSistema) {
@@ -1901,7 +1971,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
     setUserProfiles(prev => prev.filter(p => p.id !== id));
-    deleteUserProfileFromFirestore(id);
+    const res = await deleteUserProfileFromFirestore(id);
+    if (!res.success) {
+      setUserProfiles(prev => [...prev, profile]);
+      showToast({
+        type: 'error',
+        title: 'Error al Eliminar Perfil',
+        message: `No se pudo eliminar en Firestore: ${res.error || 'Permiso denegado'}. Verifica tus reglas de Firebase.`,
+        duration: 6000
+      });
+      return;
+    }
     logAudit('ELIMINAR_PERFIL_USUARIO', 'Perfiles', `Eliminación de perfil de usuario: ${profile.nombre} (${profile.codigo})`, id);
     showToast({
       type: 'info',
@@ -2091,24 +2171,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const deleteBudgetLine = (id: string) => {
+  const deleteBudgetLine = async (id: string) => {
     const item = budgetLines.find(l => l.id === id);
+    if (!item) return;
     const updated = budgetLines.filter(l => l.id !== id);
     setBudgetLines(updated);
     localStorage.setItem(STORAGE_KEYS.BUDGET_LINES, JSON.stringify(updated));
-    removeBudgetLineFromFirestore(id);
+    const res = await removeBudgetLineFromFirestore(id);
+    if (!res.success) {
+      setBudgetLines(budgetLines);
+      localStorage.setItem(STORAGE_KEYS.BUDGET_LINES, JSON.stringify(budgetLines));
+      showToast({
+        title: 'Error al Eliminar Renglón',
+        message: `No se pudo eliminar en Firestore: ${res.error || 'Permiso denegado'}. Verifica tus reglas de Firebase.`,
+        type: 'error'
+      });
+      return;
+    }
 
     logAudit(
       'ELIMINAR_RENGLON',
       'Presupuesto',
-      `Eliminación del renglón presupuestario: ${item?.renglonPresupuestario} - ${item?.nombreRenglon}`,
+      `Eliminación del renglón presupuestario: ${item.renglonPresupuestario} - ${item.nombreRenglon}`,
       id,
       item,
       undefined
     );
     showToast({
       title: 'Renglón Eliminado',
-      message: `El renglón ${item?.renglonPresupuestario} fue removido del presupuesto.`,
+      message: `El renglón ${item.renglonPresupuestario} fue removido del presupuesto.`,
       type: 'advertencia'
     });
   };
@@ -2217,16 +2308,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
-  const deleteBudgetModification = (id: string) => {
+  const deleteBudgetModification = async (id: string) => {
     const item = budgetModifications.find(m => m.id === id);
+    if (!item) return;
     const updated = budgetModifications.filter(m => m.id !== id);
     setBudgetModifications(updated);
     localStorage.setItem(STORAGE_KEYS.BUDGET_MODIFICATIONS, JSON.stringify(updated));
-    removeBudgetModificationFromFirestore(id);
+    const res = await removeBudgetModificationFromFirestore(id);
+    if (!res.success) {
+      setBudgetModifications(budgetModifications);
+      localStorage.setItem(STORAGE_KEYS.BUDGET_MODIFICATIONS, JSON.stringify(budgetModifications));
+      showToast({
+        title: 'Error al Eliminar Modificación',
+        message: `No se pudo eliminar en Firestore: ${res.error || 'Permiso denegado'}. Verifica tus reglas de Firebase.`,
+        type: 'error'
+      });
+      return;
+    }
 
     showToast({
       title: 'Modificación Eliminada',
-      message: `Se eliminó la modificación presupuestaria ${item?.correlativo || id}.`,
+      message: `Se eliminó la modificación presupuestaria ${item.correlativo || id}.`,
       type: 'advertencia'
     });
   };

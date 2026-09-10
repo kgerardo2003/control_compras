@@ -70,6 +70,11 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Reglas para Metadatos de Inicialización del Sistema
+    match /system_metadata/{docId} {
+      allow read, write: if true;
+    }
+
     // Default deny all other paths
     match /{document=**} {
       allow read, write: if false;

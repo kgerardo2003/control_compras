@@ -286,25 +286,30 @@ export async function saveCatalogToFirestore(catalog: Catalog): Promise<void> {
   }
 }
 
-export async function removeCatalogFromFirestore(catalogId: string): Promise<void> {
+export async function removeCatalogFromFirestore(catalogId: string): Promise<{ success: boolean; error?: string }> {
   try {
     const docRef = doc(db, CATALOGS_COLLECTION, catalogId);
     await deleteDoc(docRef);
-  } catch (err) {
+    return { success: true };
+  } catch (err: any) {
     console.error("Error eliminando catálogo en Firestore:", err);
+    return { success: false, error: err?.message || String(err) };
   }
 }
 
-export async function removeUserFromFirestore(userId: string): Promise<void> {
+export async function removeUserFromFirestore(userId: string): Promise<{ success: boolean; error?: string }> {
   try {
     const docRef = doc(db, USERS_COLLECTION, userId);
     await deleteDoc(docRef);
-  } catch (err) {
+    console.log("Usuario eliminado exitosamente en Firestore:", userId);
+    return { success: true };
+  } catch (err: any) {
     console.error("Error eliminando usuario en Firestore:", err);
+    return { success: false, error: err?.message || String(err) };
   }
 }
 
-// Sembrado inicial si la base de datos está vacía
+// Sembrado inicial si la base de datos está completamente vacía (protegido contra re-sembrado de borrados)
 export async function seedInitialDataIfEmpty(
   initialPurchases: PurchaseRecord[],
   initialCatalogs: Catalog[],
@@ -312,38 +317,65 @@ export async function seedInitialDataIfEmpty(
   initialLogs: AuditLogEntry[]
 ): Promise<void> {
   try {
-    const purchasesSnap = await getDocs(query(collection(db, PURCHASES_COLLECTION), limit(1)));
-    if (purchasesSnap.empty) {
-      console.log("Sembrando datos institucionales iniciales en Firestore...");
-      const batch = writeBatch(db);
-
-      // Compras
-      for (const p of initialPurchases) {
-        const ref = doc(db, PURCHASES_COLLECTION, p.id);
-        batch.set(ref, cleanUndefined(p));
-      }
-
-      // Catálogos
-      for (const c of initialCatalogs) {
-        const ref = doc(db, CATALOGS_COLLECTION, c.id);
-        batch.set(ref, cleanUndefined(c));
-      }
-
-      // Usuarios
-      for (const u of initialUsers) {
-        const ref = doc(db, USERS_COLLECTION, u.id);
-        batch.set(ref, cleanUndefined(u));
-      }
-
-      // Auditoría
-      for (const log of initialLogs.slice(0, 15)) {
-        const ref = doc(db, AUDIT_LOGS_COLLECTION, log.id);
-        batch.set(ref, cleanUndefined(log));
-      }
-
-      await batch.commit();
-      console.log("Sembrado inicial de Firestore completado con éxito.");
+    // 1. Candado permanente: si ya existe metadato de inicialización, NUNCA re-sembrar (respeta borrados del usuario)
+    const initDocRef = doc(db, 'system_metadata', 'initialized');
+    const initSnap = await getDoc(initDocRef);
+    if (initSnap.exists()) {
+      return;
     }
+
+    // 2. Verificar si la base de datos ya tiene colecciones con datos existentes
+    const [purchasesSnap, usersSnap, catalogsSnap] = await Promise.all([
+      getDocs(query(collection(db, PURCHASES_COLLECTION), limit(1))),
+      getDocs(query(collection(db, USERS_COLLECTION), limit(1))),
+      getDocs(query(collection(db, CATALOGS_COLLECTION), limit(1)))
+    ]);
+
+    if (!purchasesSnap.empty || !usersSnap.empty || !catalogsSnap.empty) {
+      // Ya cuenta con datos previos del usuario, sellar como inicializado para nunca sobreescribir
+      await setDoc(initDocRef, { 
+        initializedAt: new Date().toISOString(), 
+        autoDetectedExistingData: true 
+      }, { merge: true });
+      return;
+    }
+
+    console.log("Base de datos limpia detectada. Sembrando datos institucionales iniciales en Firestore...");
+    const batch = writeBatch(db);
+
+    // Compras
+    for (const p of initialPurchases) {
+      const ref = doc(db, PURCHASES_COLLECTION, p.id);
+      batch.set(ref, cleanUndefined(p));
+    }
+
+    // Catálogos
+    for (const c of initialCatalogs) {
+      const ref = doc(db, CATALOGS_COLLECTION, c.id);
+      batch.set(ref, cleanUndefined(c));
+    }
+
+    // Usuarios
+    for (const u of initialUsers) {
+      const ref = doc(db, USERS_COLLECTION, u.id);
+      batch.set(ref, cleanUndefined(u));
+    }
+
+    // Auditoría
+    for (const log of initialLogs.slice(0, 15)) {
+      const ref = doc(db, AUDIT_LOGS_COLLECTION, log.id);
+      batch.set(ref, cleanUndefined(log));
+    }
+
+    // Sello de inicialización único
+    batch.set(initDocRef, {
+      initializedAt: new Date().toISOString(),
+      seeded: true,
+      sistema: 'control-compras-oj'
+    });
+
+    await batch.commit();
+    console.log("Sembrado inicial de Firestore completado con éxito.");
   } catch (err) {
     console.warn("Nota sobre sembrado inicial en Firestore:", err);
   }

@@ -33,6 +33,8 @@ export const UsersView: React.FC = () => {
 
   const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Form State
   const [username, setUsername] = useState('');
@@ -411,9 +413,9 @@ export const UsersView: React.FC = () => {
                         {u.username !== 'admin' && (
                           <button
                             type="button"
-                            onClick={() => deleteUser(u.id)}
+                            onClick={() => setUserToDelete(u)}
                             className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                            title="Eliminar Cuenta"
+                            title="Eliminar Cuenta Permanentemente"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -585,6 +587,83 @@ export const UsersView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Eliminación Permanente */}
+      {userToDelete && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 text-rose-600 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">¿Eliminar Usuario de Forma Permanente?</h3>
+                <p className="text-xs text-slate-500">Esta acción removerá el registro de Firebase Firestore</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 mb-5 text-xs space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Nombre Completo:</span>
+                <span className="font-semibold text-slate-800">{userToDelete.nombreCompleto}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Usuario (Login):</span>
+                <span className="font-mono font-semibold text-slate-800">@{userToDelete.username}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Correo Electrónico:</span>
+                <span className="text-slate-700">{userToDelete.email}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Rol / Perfil:</span>
+                <span className="font-medium text-blue-900 capitalize">{userToDelete.rol.replace('_', ' ')}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 mb-5 leading-relaxed">
+              El usuario será eliminado tanto del almacenamiento local como de la colección <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded font-mono font-semibold">users</code> en tu base de datos Firebase vinculada (<span className="font-medium text-slate-800">control-de-compras-oj</span>).
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setUserToDelete(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={async () => {
+                  setIsDeleting(true);
+                  try {
+                    await deleteUser(userToDelete.id);
+                  } finally {
+                    setIsDeleting(false);
+                    setUserToDelete(null);
+                  }
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-xs transition-colors shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Eliminando de Firebase...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Confirmar Eliminación</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
