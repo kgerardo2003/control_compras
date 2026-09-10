@@ -1,12 +1,12 @@
 {
   "projectId": "control-de-compras-oj",
-  "appId": "1:427223558519:web:035bfa9230a370b6ae5972",
+  "appId": "1:427223558519:web:f39368abf2abc153ae5972",
   "apiKey": "AIzaSyCKLsEISKMaOvYskz6MpGpVuvXHlAl95g4",
   "authDomain": "control-de-compras-oj.firebaseapp.com",
   "firestoreDatabaseId": "(default)",
   "storageBucket": "control-de-compras-oj.firebasestorage.app",
   "messagingSenderId": "427223558519",
-  "measurementId": "G-ENZ3FV8EM7",
+  "measurementId": "G-DS64J7WKTT",
   "oAuthClientId": "",
   "recaptchaSiteKey": ""
 }
