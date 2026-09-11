@@ -914,7 +914,7 @@ export const DashboardView: React.FC = () => {
             </h2>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Monitoreo en tiempo real de eventos NOG y formularios F56-e de la Gerencia de Informática
+            Monitoreo en tiempo real de eventos NOG y formularios F56-e del Departamento de Compras
           </p>
         </div>
 

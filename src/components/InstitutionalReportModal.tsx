@@ -124,7 +124,7 @@ export const InstitutionalReportModal: React.FC<InstitutionalReportModalProps> =
                 </tr>
                 <tr className="bg-slate-50">
                   <td className="border border-slate-300 p-2 font-bold text-slate-700">Dependencia Solicitante:</td>
-                  <td className="border border-slate-300 p-2" colSpan={3}>{purchase.dependenciaSolicitante || 'Gerencia de Informática'}</td>
+                  <td className="border border-slate-300 p-2" colSpan={3}>{purchase.dependenciaSolicitante || 'Departamento de Compras'}</td>
                 </tr>
                 <tr>
                   <td className="border border-slate-300 p-2 font-bold text-slate-700">Categoría Tecnológica:</td>

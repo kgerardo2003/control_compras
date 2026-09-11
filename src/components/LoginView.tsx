@@ -81,7 +81,7 @@ export const LoginView: React.FC = () => {
 
             <div className="mt-4 pt-3 border-t border-[#1c39bb]/40 flex items-center justify-center gap-2 text-[#93c5fd] text-xs font-semibold uppercase tracking-wider">
               <ShieldCheck className="w-4 h-4 text-[#4682b4]" />
-              <span>Sistema de Control de Adquisiciones • Gerencia de Informática</span>
+              <span>Sistema de Control de Adquisiciones • Departamento de Compras</span>
             </div>
             <p className="text-[11px] text-slate-300 mt-1">
               Registro, Monitoreo y Fiscalización de Formularios F56-e y Eventos NOG
@@ -217,7 +217,7 @@ export const LoginView: React.FC = () => {
       {/* Pie de Página Institucional */}
       <footer className="p-4 text-center text-xs text-slate-500 border-t border-slate-900 bg-slate-950/80 z-10">
         <p className="font-semibold text-slate-400">
-          Organismo Judicial de Guatemala • Gerencia de Informática
+          Organismo Judicial de Guatemala • Departamento de Compras
         </p>
         <p className="text-[12px] text-slate-300 mt-1">
           Creador del Sistema: <strong className="text-amber-400 font-bold">Lic. Kevin Gerardo López de León</strong>

@@ -44,7 +44,7 @@ export const UsersView: React.FC = () => {
   const [rol, setRol] = useState<UserRole>('usuario_estandar');
   const [perfilId, setPerfilId] = useState<string>('');
   const [cargo, setCargo] = useState('');
-  const [departamento, setDepartamento] = useState('Gerencia de Informática - OJ');
+  const [departamento, setDepartamento] = useState('Departamento de Compras - OJ');
   const [notifyByEmail, setNotifyByEmail] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resendingEmailUserId, setResendingEmailUserId] = useState<string | null>(null);
@@ -61,7 +61,7 @@ export const UsersView: React.FC = () => {
     setRol(defaultProf ? (defaultProf.codigo as UserRole) : 'usuario_estandar');
     setPerfilId(defaultProf ? defaultProf.id : '');
     setCargo('');
-    setDepartamento('Gerencia de Informática - OJ');
+    setDepartamento('Departamento de Compras - OJ');
     setNotifyByEmail(true);
     setIsSubmitting(false);
     setErrorMsg('');
@@ -307,7 +307,7 @@ export const UsersView: React.FC = () => {
             <span className="text-xs font-bold text-slate-900 uppercase">Usuario Estándar</span>
           </div>
           <p className="text-xs text-slate-500 leading-relaxed">
-            Operativo: Registro y edición de requerimientos de compras de la Gerencia de Informática y consulta de dashboard.
+            Operativo: Registro y edición de requerimientos de compras del Departamento de Compras y consulta de dashboard.
           </p>
         </div>
       </div>
@@ -558,7 +558,7 @@ export const UsersView: React.FC = () => {
                   type="text"
                   value={departamento}
                   onChange={(e) => setDepartamento(e.target.value)}
-                  placeholder="ej. Gerencia de Informática - OJ"
+                  placeholder="ej. Departamento de Compras - OJ"
                   className="w-full p-2 border border-slate-300 rounded-lg focus:ring-1 focus:ring-amber-500"
                 />
               </div>

@@ -1,6 +1,6 @@
 /**
  * Plantilla de correo oficial para notificación de creación de usuario
- * Sistema de Control de Compras - Gerencia de Informática
+ * Sistema de Control de Compras - Departamento de Compras
  * Organismo Judicial de Guatemala
  */
 
@@ -31,8 +31,8 @@ export function buildUserWelcomeEmail(params: UserWelcomeEmailParams): {
 
   const subject = `Acceso al Sistema de Control de Compras - Credenciales de Usuario (@${username})`;
 
-  // Texto plano exacto requerido por la Gerencia de Informática
-  const text = `Por este medio le informamos que su cuenta de usuario ha sido creada exitosamente para acceder al Sistema de Control de Compras de la Gerencia de Informática.
+  // Texto plano exacto requerido por el Departamento de Compras
+  const text = `Por este medio le informamos que su cuenta de usuario ha sido creada exitosamente para acceder al Sistema de Control de Compras del Departamento de Compras.
 
 A continuación, le compartimos sus credenciales de acceso:
 
@@ -49,7 +49,7 @@ Atentamente,
 
 Administrador del Sistema
 
-Gerencia de Informática
+Departamento de Compras
 Organismo Judicial de Guatemala`;
 
   // Versión HTML profesional e institucional
@@ -101,7 +101,7 @@ Organismo Judicial de Guatemala`;
             <td style="padding: 32px 30px; color: #1e293b; font-size: 14px; line-height: 1.65;">
               
               <p style="margin: 0 0 16px; font-size: 14px;">
-                Por este medio le informamos que su cuenta de usuario ha sido creada exitosamente para acceder al Sistema de Control de Compras de la Gerencia de Informática.
+                Por este medio le informamos que su cuenta de usuario ha sido creada exitosamente para acceder al Sistema de Control de Compras del Departamento de Compras.
               </p>
 
               <p style="margin: 0 0 12px; font-weight: bold; color: #0b183c; font-size: 14px;">
@@ -163,7 +163,7 @@ Organismo Judicial de Guatemala`;
               <div style="border-top: 1px solid #e2e8f0; padding-top: 18px; color: #334155;">
                 <p style="margin: 0; font-weight: bold; font-size: 13px;">Atentamente,</p>
                 <p style="margin: 6px 0 2px; font-weight: bold; color: #0b183c; font-size: 14px;">Administrador del Sistema</p>
-                <p style="margin: 0; color: #475569; font-size: 13px;">Gerencia de Informática</p>
+                <p style="margin: 0; color: #475569; font-size: 13px;">Departamento de Compras</p>
                 <p style="margin: 0; color: #475569; font-size: 13px;">Organismo Judicial de Guatemala</p>
               </div>
 
@@ -174,7 +174,7 @@ Organismo Judicial de Guatemala`;
           <tr>
             <td style="background-color: #f8fafc; padding: 16px 24px; text-align: center; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 11px; line-height: 1.5;">
               <p style="margin: 0 0 4px;">
-                Sistema de Control de Compras &bull; Gerencia de Informática
+                Sistema de Control de Compras &bull; Departamento de Compras
               </p>
               <p style="margin: 0; font-weight: 600; color: #475569;">
                 Creador del Sistema: Lic. Kevin Gerardo López de León

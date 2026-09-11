@@ -938,7 +938,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     Organismo Judicial de Guatemala
                   </h3>
                   <p className="text-xs text-blue-100">
-                    Gerencia de Informática
+                    Departamento de Compras
                   </p>
                 </div>
               </div>

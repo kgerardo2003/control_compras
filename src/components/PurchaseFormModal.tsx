@@ -536,7 +536,7 @@ export const PurchaseFormModal: React.FC = () => {
                 {purchaseToEdit ? 'Modificar Registro de Adquisición' : 'Registrar Nueva Adquisición'}
               </h2>
               <p className="text-[11px] text-slate-400">
-                Gerencia de Informática • Formulario Oficial F56-e
+                Departamento de Compras • Formulario Oficial F56-e
               </p>
             </div>
           </div>
@@ -1158,7 +1158,7 @@ export const PurchaseFormModal: React.FC = () => {
                           <span>Renglón 113 - Telefonía (Solo Referencia Administrativa)</span>
                         </div>
                         <p className="text-[11px] text-indigo-800 leading-relaxed">
-                          Este renglón es gestionado y ejecutado por la <strong>Gerencia Administrativa</strong>. Esta ficha se registra exclusivamente para control referencial y trazabilidad interna; <strong>NO afecta ni descuenta la disponibilidad presupuestaria</strong> de la Gerencia de Informática.
+                          Este renglón es gestionado y ejecutado por la <strong>Gerencia Administrativa</strong>. Esta ficha se registra exclusivamente para control referencial y trazabilidad interna; <strong>NO afecta ni descuenta la disponibilidad presupuestaria</strong> del Departamento de Compras.
                         </p>
                       </div>
                     );
@@ -1289,7 +1289,7 @@ export const PurchaseFormModal: React.FC = () => {
                     }`}
                   />
                   <p className="text-[10px] text-slate-400 mt-0.5">
-                    {evaluadoGIT === 'Sí' ? 'Fecha que la Gerencia de Informática elaboró el oficio hacia compras' : 'No aplica'}
+                    {evaluadoGIT === 'Sí' ? 'Fecha que el Departamento de Compras elaboró el oficio' : 'No aplica'}
                   </p>
                 </div>
               </div>

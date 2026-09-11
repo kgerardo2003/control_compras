@@ -144,7 +144,7 @@ export const BudgetOfficialCatalogView: React.FC<BudgetOfficialCatalogViewProps>
           porcentajeUsadoComprometido: 0,
           estatusDisponibilidad: 'Sin Presupuesto',
           ejercicioFiscal: 2026,
-          observaciones: 'Incorporado desde Catálogo Oficial Estándar de la Gerencia de Informática.'
+          observaciones: 'Incorporado desde Catálogo Oficial Estándar del Departamento de Compras.'
         });
         addedCount++;
       }
@@ -165,7 +165,7 @@ export const BudgetOfficialCatalogView: React.FC<BudgetOfficialCatalogViewProps>
               <BookOpen className="w-5 h-5" />
             </span>
             <h2 className="text-lg font-extrabold text-white tracking-tight">
-              Catálogo Presupuestario Oficial — Gerencia de Informática
+              Catálogo Presupuestario Oficial — Departamento de Compras
             </h2>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
               {combinedCatalog.length} Renglones Registrados

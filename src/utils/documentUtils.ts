@@ -25,7 +25,7 @@ export function generateOfficialF56PdfDataUrl(
   const f56 = purchase?.f56 || '000001';
   const desc = purchase?.descripcion || 'Solicitud de adquisición y dictamen técnico de equipamiento o servicios tecnológicos.';
   const monto = purchase?.monto || 0;
-  const depto = purchase?.dependenciaSolicitante || purchase?.areaSolicitante || 'Gerencia de Informática';
+  const depto = purchase?.dependenciaSolicitante || purchase?.areaSolicitante || 'Departamento de Compras';
   const prov = purchase?.proveedorAdjudicado || 'En proceso de evaluación y adjudicación';
   const fechaDictamen = purchase?.fechaDictamenGIT || 'Dictamen Técnico Registrado';
   const fechaOficio = purchase?.fechaElaboracionOficioGIT || 'Oficio de Traslado GIT Emitido';

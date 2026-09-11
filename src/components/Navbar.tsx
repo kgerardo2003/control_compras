@@ -44,7 +44,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
     theme,
     setTheme,
     themeConfig,
-    firestoreStatus
+    firestoreStatus,
+    setIsFirestoreModalOpen
   } = useApp();
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -122,7 +123,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
             Gestión de Adquisiciones Institucionales
           </h1>
           <p className="hidden sm:block text-[11px] text-slate-500 font-medium">
-            Gerencia de Informática • Organismo Judicial
+            Departamento de Compras • Organismo Judicial
           </p>
         </div>
       </div>
@@ -131,10 +132,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
       <div className="flex items-center space-x-3 sm:space-x-5">
         
         {/* Indicador de Base de Datos en la Nube Firestore (Multiusuario en Tiempo Real) */}
-        <div 
+        <button 
           id="badge-firestore-status"
-          className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 bg-slate-50/80 text-slate-700 select-none shadow-2xs"
-          title={firestoreStatus === 'conectado' ? 'Base de datos Firestore sincronizada en tiempo real' : 'Conectando con base de datos en la nube...'}
+          type="button"
+          onClick={() => setIsFirestoreModalOpen(true)}
+          className={`hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer select-none shadow-2xs ${
+            firestoreStatus === 'conectado'
+              ? 'border-emerald-200 bg-emerald-50/80 text-emerald-800 hover:bg-emerald-100/80'
+              : firestoreStatus === 'no_creada'
+              ? 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 animate-pulse'
+              : 'border-slate-200 bg-slate-50/80 text-slate-700 hover:bg-slate-100'
+          }`}
+          title="Ver estado de base de datos y sincronización en la nube (Click para abrir diagnóstico)"
         >
           <span className="relative flex h-2 w-2">
             {firestoreStatus === 'conectado' ? (
@@ -142,15 +151,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileMenu }) => {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </>
+            ) : firestoreStatus === 'no_creada' ? (
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
             ) : (
               <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400 animate-pulse"></span>
             )}
           </span>
-          <Database className="w-3.5 h-3.5 text-slate-500" />
-          <span className="font-semibold text-slate-800 tracking-tight">
-            {firestoreStatus === 'conectado' ? 'BD Firestore Activa' : 'Conectando BD...'}
+          <Database className={`w-3.5 h-3.5 ${
+            firestoreStatus === 'conectado' ? 'text-emerald-600' : firestoreStatus === 'no_creada' ? 'text-amber-600' : 'text-slate-500'
+          }`} />
+          <span className="font-semibold tracking-tight">
+            {firestoreStatus === 'conectado' 
+              ? 'BD Firestore Activa' 
+              : firestoreStatus === 'no_creada'
+              ? 'BD No Creada (Configurar)'
+              : 'Conectando BD...'}
           </span>
-        </div>
+        </button>
 
         {/* Selector de Tema Rápido (3 Temas) */}
         <div className="relative" ref={themeMenuRef}>

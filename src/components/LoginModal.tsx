@@ -76,7 +76,7 @@ export const LoginModal: React.FC = () => {
             Organismo Judicial de Guatemala
           </h2>
           <p className="text-xs text-[#93c5fd] mt-0.5">
-            Gerencia de Informática • Control de Adquisiciones
+            Departamento de Compras • Control de Adquisiciones
           </p>
         </div>
 

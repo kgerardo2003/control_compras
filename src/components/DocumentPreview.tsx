@@ -124,11 +124,11 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
     const f56e = purchase?.f56e || '000001-2026';
     const f56 = purchase?.f56 || '000001';
     const monto = purchase?.monto ? formatQuetzales(purchase.monto) : 'Q 845,000.00';
-    const desc = purchase?.descripcion || 'Adquisición de suministros y equipamiento tecnológico conforme a especificaciones oficiales de la Gerencia de Informática.';
-    const depto = purchase?.dependenciaSolicitante || purchase?.areaSolicitante || 'Gerencia de Informática';
+    const desc = purchase?.descripcion || 'Adquisición de suministros y equipamiento conforme a especificaciones oficiales del Departamento de Compras.';
+    const depto = purchase?.dependenciaSolicitante || purchase?.areaSolicitante || 'Departamento de Compras';
     const prov = purchase?.proveedorAdjudicado || 'En proceso de selección y adjudicación';
     const dictamen = purchase?.fechaDictamenGIT || 'Dictamen Técnico Registrado';
-    const oficio = purchase?.fechaElaboracionOficioGIT || 'Oficio GIT Elaborado';
+    const oficio = purchase?.fechaElaboracionOficioGIT || 'Oficio Elaborado';
 
     return (
       <div className={`w-full bg-slate-100/70 p-3 sm:p-6 overflow-y-auto ${fullscreen ? 'max-h-[82vh]' : 'max-h-[500px]'}`}>
@@ -148,7 +148,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
                     Organismo Judicial de Guatemala
                   </h3>
                   <p className="text-[11px] font-semibold text-slate-600 uppercase">
-                    Gerencia de Informática • Dirección de Compras
+                    Departamento de Compras • Organismo Judicial
                   </p>
                 </div>
               </div>

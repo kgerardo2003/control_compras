@@ -31,7 +31,7 @@ export const OJLogo: React.FC<OJLogoProps> = ({
     imageUrl: officialEmblemUrl,
     presetId: 'oj_vector',
     title: 'Organismo Judicial',
-    subtitle: 'Gerencia de Informática'
+    subtitle: 'Departamento de Compras'
   };
 
   const iconSizes = {
@@ -135,7 +135,7 @@ export const OJLogo: React.FC<OJLogoProps> = ({
               <span className={`h-px w-4 ${lightMode ? 'bg-amber-600/40' : 'bg-amber-400/40'}`} />
             </div>
             <span className={`text-[10px] sm:text-[11px] font-medium tracking-tight leading-snug line-clamp-2 ${lightMode ? 'text-slate-600' : 'text-slate-300'}`}>
-              {activeLogo.subtitle || 'Gerencia de Informática'}
+              {activeLogo.subtitle || 'Departamento de Compras'}
             </span>
           </div>
         )}
@@ -159,7 +159,7 @@ export const OJLogo: React.FC<OJLogoProps> = ({
             </span>
           </div>
           <span className={`text-[11px] sm:text-xs font-medium tracking-normal truncate ${lightMode ? 'text-blue-900' : 'text-sky-200'}`}>
-            {activeLogo.subtitle || 'Gerencia de Informática'}
+            {activeLogo.subtitle || 'Departamento de Compras'}
           </span>
         </div>
       )}

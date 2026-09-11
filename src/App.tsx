@@ -25,10 +25,20 @@ import { PurchaseFormModal } from './components/PurchaseFormModal';
 import { PurchaseDetailModal } from './components/PurchaseDetailModal';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { ImportExcelModal } from './components/ImportExcelModal';
+import { FirestoreSyncModal } from './components/FirestoreSyncModal';
 import { ToastContainer } from './components/ToastContainer';
+import { Database, AlertTriangle } from 'lucide-react';
 
 const AppContent: React.FC = () => {
-  const { activeTab, setActiveTab, themeConfig, currentUser, hasModuleAccess } = useApp();
+  const { 
+    activeTab, 
+    setActiveTab, 
+    themeConfig, 
+    currentUser, 
+    hasModuleAccess, 
+    firestoreStatus, 
+    setIsFirestoreModalOpen 
+  } = useApp();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Redireccionar si el usuario actual no tiene permiso sobre la pestaña activa
@@ -66,6 +76,28 @@ const AppContent: React.FC = () => {
         
         {/* Cabecera Superior */}
         <Navbar onOpenMobileMenu={() => setIsMobileMenuOpen(true)} />
+
+        {/* Alerta de Sincronización en la Nube si Firestore no ha sido creada */}
+        {firestoreStatus === 'no_creada' && (
+          <div 
+            id="banner-firestore-sync-warning"
+            className="bg-amber-500 text-slate-950 px-4 py-2 text-xs font-semibold flex flex-wrap items-center justify-between shadow-xs border-b border-amber-600 flex-shrink-0 gap-2"
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-slate-950 shrink-0" />
+              <span>
+                <strong>Atención:</strong> La base de datos Firestore aún no ha sido creada en Firebase Console para el proyecto <code className="bg-amber-600/30 px-1 py-0.5 rounded font-mono font-bold">control-de-compras-oj</code>. Para sincronizar los cambios entre diferentes equipos o navegadores, debe activarse en Firebase.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsFirestoreModalOpen(true)}
+              className="px-3 py-1 bg-slate-950 text-white hover:bg-slate-900 rounded font-bold text-xs transition-colors shrink-0 shadow-sm cursor-pointer ml-auto sm:ml-0"
+            >
+              Ver Guía Rápida (20 seg)
+            </button>
+          </div>
+        )}
 
         {/* Contenedor con Scroll de Vistas */}
         <main className={`flex-1 overflow-y-auto p-4 sm:p-6 ${themeConfig.appBackground}`}>
@@ -180,7 +212,7 @@ const AppContent: React.FC = () => {
         {/* Pie de Página Institucional (Professional Polish) */}
         <footer className="py-2 min-h-8 bg-slate-200 border-t border-slate-300 px-6 flex flex-wrap items-center justify-between text-[11px] font-medium text-slate-600 flex-shrink-0 print:hidden gap-2">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="font-semibold text-slate-700">© 2026 Organismo Judicial de Guatemala - Gerencia de Informática</span>
+            <span className="font-semibold text-slate-700">© 2026 Organismo Judicial de Guatemala - Departamento de Compras</span>
             <span className="text-slate-400 hidden sm:inline">•</span>
             <span className="text-slate-800">
               Creador del Sistema: <strong className="text-blue-900 font-bold">Lic. Kevin Gerardo López de León</strong>
@@ -203,6 +235,7 @@ const AppContent: React.FC = () => {
       <PurchaseDetailModal />
       <ChangePasswordModal />
       <ImportExcelModal />
+      <FirestoreSyncModal />
 
       {/* Notificaciones Flotantes (Toasts) */}
       <ToastContainer />

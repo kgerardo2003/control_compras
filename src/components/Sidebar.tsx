@@ -40,7 +40,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
     hasModuleAccess,
     getUserProfile,
     themeConfig,
-    firestoreStatus
+    firestoreStatus,
+    setIsFirestoreModalOpen
   } = useApp();
 
   const handleNavClick = (tab: ActiveTab) => {
@@ -63,7 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
     switch (currentUser?.rol) {
       case 'administrador': return 'Administrador';
       case 'auditor': return 'Auditor';
-      case 'usuario_estandar': return 'Operador Informática';
+      case 'usuario_estandar': return 'Operador Compras';
       default: return 'Usuario';
     }
   };
@@ -409,8 +410,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
             </span>
           </div>
 
+          {/* Botón de Estado de Sincronización */}
+          <button
+            type="button"
+            onClick={() => setIsFirestoreModalOpen(true)}
+            className={`w-full py-1.5 px-2.5 rounded-lg text-[11px] font-medium flex items-center justify-between border transition-colors cursor-pointer ${
+              firestoreStatus === 'conectado'
+                ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300 hover:bg-emerald-900/50'
+                : firestoreStatus === 'no_creada'
+                ? 'bg-amber-950/60 border-amber-500/50 text-amber-300 hover:bg-amber-900/60 animate-pulse'
+                : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
+            }`}
+            title="Sincronización en la Nube (Click para ver estado)"
+          >
+            <span className="flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${
+                firestoreStatus === 'conectado' ? 'bg-emerald-400' : firestoreStatus === 'no_creada' ? 'bg-amber-400' : 'bg-slate-400'
+              }`} />
+              <Database className="w-3 h-3" />
+              <span>{firestoreStatus === 'conectado' ? 'BD Sincronizada' : firestoreStatus === 'no_creada' ? 'Configurar BD' : 'Conectando BD'}</span>
+            </span>
+            <span className="text-[9px] uppercase tracking-wider opacity-70">
+              {firestoreStatus === 'conectado' ? 'En línea' : 'Pendiente'}
+            </span>
+          </button>
+
           <div className="flex items-center justify-between px-1 text-[10px] text-slate-400">
-            <span>SICOIN-GI v2.4</span>
+            <span>SICOIN-COMPRAS v2.4</span>
             <button
               type="button"
               onClick={resetToDemoData}

@@ -54,19 +54,100 @@ function createFirestoreInstance(): Firestore {
 export const db: Firestore = createFirestoreInstance();
 
 // Verificación obligatoria de conexión al servidor Firestore
-export async function testConnection(): Promise<boolean> {
+export interface FirestoreHealthResult {
+  status: 'conectado' | 'no_creada' | 'permiso_denegado' | 'offline' | 'conectando';
+  message: string;
+  projectId: string;
+  databaseId: string;
+  errorDetail?: string;
+  consoleUrl: string;
+}
+
+export async function checkFirestoreHealth(): Promise<FirestoreHealthResult> {
+  const projectId = FIREBASE_CONFIG.projectId || 'control-de-compras-oj';
+  const databaseId = FIREBASE_CONFIG.firestoreDatabaseId || '(default)';
+  const consoleUrl = `https://console.firebase.google.com/project/${projectId}/firestore`;
+
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    return true;
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn("Verificando conectividad con Firebase Firestore...");
+    // 1. Diagnóstico exacto vía REST API para saber si la base de datos existe en Google Cloud
+    const response = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents?key=${FIREBASE_CONFIG.apiKey}`
+    );
+
+    if (response.status === 404) {
+      const errData = await response.json().catch(() => ({}));
+      const msg = errData?.error?.message || 'The database (default) does not exist';
+      return {
+        status: 'no_creada',
+        message: `La base de datos Firestore (default) aún no ha sido creada en el proyecto "${projectId}".`,
+        projectId,
+        databaseId,
+        errorDetail: msg,
+        consoleUrl
+      };
     }
-    return true;
+
+    // 2. Comprobar a través del SDK web oficial
+    try {
+      await getDocFromServer(doc(db, 'system_metadata', 'connection_test'));
+      return {
+        status: 'conectado',
+        message: 'Base de datos Firestore conectada y sincronizando en tiempo real.',
+        projectId,
+        databaseId,
+        consoleUrl
+      };
+    } catch (sdkErr: any) {
+      const msg = sdkErr?.message || String(sdkErr);
+      const code = sdkErr?.code || '';
+      if (msg.includes('NOT_FOUND') || msg.includes('does not exist') || code === 'not-found') {
+        return {
+          status: 'no_creada',
+          message: `La base de datos Firestore no existe en el proyecto "${projectId}".`,
+          projectId,
+          databaseId,
+          errorDetail: msg,
+          consoleUrl
+        };
+      }
+      if (code === 'permission-denied' || msg.includes('Missing or insufficient permissions')) {
+        return {
+          status: 'permiso_denegado',
+          message: 'Permiso denegado por las reglas de seguridad en Firebase.',
+          projectId,
+          databaseId,
+          errorDetail: msg,
+          consoleUrl: `https://console.firebase.google.com/project/${projectId}/firestore/rules`
+        };
+      }
+      return {
+        status: 'conectado',
+        message: 'Conectado a Firestore.',
+        projectId,
+        databaseId,
+        consoleUrl
+      };
+    }
+  } catch (netErr: any) {
+    return {
+      status: 'offline',
+      message: 'No se pudo contactar los servidores de Firebase (modo fuera de línea).',
+      projectId,
+      databaseId,
+      errorDetail: netErr?.message || String(netErr),
+      consoleUrl
+    };
   }
 }
-// Ejecución silenciosa sin bloquear carga del módulo
-testConnection().catch(() => {});
+
+export async function testConnection(): Promise<boolean> {
+  try {
+    const health = await checkFirestoreHealth();
+    return health.status === 'conectado';
+  } catch {
+    return false;
+  }
+}
 
 // Colecciones
 export const PURCHASES_COLLECTION = 'purchases';

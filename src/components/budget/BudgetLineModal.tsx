@@ -245,7 +245,7 @@ export const BudgetLineModal: React.FC<BudgetLineModalProps> = ({
                 {lineToEdit ? `Editar Renglón Presupuestario ${lineToEdit.renglonPresupuestario}` : 'Registrar Nuevo Renglón Presupuestario'}
               </h3>
               <p className="text-xs text-slate-400">
-                Estructura presupuestaria oficial de la Gerencia de Informática
+                Estructura presupuestaria oficial del Departamento de Compras
               </p>
             </div>
           </div>
@@ -463,7 +463,7 @@ export const BudgetLineModal: React.FC<BudgetLineModalProps> = ({
               value={observaciones}
               onChange={(e) => setObservaciones(e.target.value)}
               rows={2}
-              placeholder="Descripción del alcance de este renglón en la Gerencia de Informática..."
+              placeholder="Descripción del alcance de este renglón en el Departamento de Compras..."
               className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-normal focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             />
           </div>

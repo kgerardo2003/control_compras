@@ -68,7 +68,9 @@ import {
   saveBudgetModificationToFirestore,
   removeBudgetModificationFromFirestore,
   onBudgetLinesSnapshot,
-  onBudgetModificationsSnapshot
+  onBudgetModificationsSnapshot,
+  checkFirestoreHealth,
+  FirestoreHealthResult
 } from '../lib/firebase';
 import { collection, onSnapshot, query, limit } from 'firebase/firestore';
 import { saveAttachmentToIndexedDB, getAttachmentFromIndexedDB, getAttachmentWithDataUrl } from '../utils/attachmentStorage';
@@ -78,7 +80,7 @@ export const DEFAULT_LOGO_CONFIG: CustomLogoConfig = {
   imageUrl: '/organismo_judicial_logo.svg',
   presetId: 'oj_vector',
   title: 'Organismo Judicial',
-  subtitle: 'Gerencia de Informática'
+  subtitle: 'Departamento de Compras'
 };
 
 interface AppContextType {
@@ -93,7 +95,11 @@ interface AppContextType {
   setActiveTab: (tab: ActiveTab) => void;
   isOnline: boolean;
   isFirestoreConnected: boolean;
-  firestoreStatus: 'conectado' | 'conectando' | 'offline';
+  firestoreStatus: 'conectado' | 'conectando' | 'offline' | 'no_creada' | 'permiso_denegado';
+  firestoreHealth: FirestoreHealthResult | null;
+  checkDatabaseConnection: () => Promise<void>;
+  isFirestoreModalOpen: boolean;
+  setIsFirestoreModalOpen: (open: boolean) => void;
   refreshPurchases: () => Promise<void>;
   selectedPurchase: PurchaseRecord | null;
   setSelectedPurchase: (purchase: PurchaseRecord | null) => void;
@@ -257,8 +263,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           parsed[adminIndex].email = 'klopez@oj.gob.gt';
           parsed[adminIndex].password = parsed[adminIndex].password || 'Guate2026*';
           parsed[adminIndex].rol = 'administrador';
-          parsed[adminIndex].cargo = 'Gerente de Informática';
-          parsed[adminIndex].departamento = 'Gerencia de Informática - OJ';
+          parsed[adminIndex].cargo = 'Jefe del Departamento de Compras';
+          parsed[adminIndex].departamento = 'Departamento de Compras - OJ';
           parsed[adminIndex].activo = true;
           return parsed;
         } else {
@@ -402,8 +408,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             parsed.nombreCompleto = 'Lic. Kevin Gerardo López de León';
             parsed.email = 'klopez@oj.gob.gt';
             parsed.password = parsed.password || 'Guate2026*';
-            parsed.cargo = 'Gerente de Informática';
-            parsed.departamento = 'Gerencia de Informática - OJ';
+            parsed.cargo = 'Jefe del Departamento de Compras';
+            parsed.departamento = 'Departamento de Compras - OJ';
           }
           return parsed;
         } catch {
@@ -416,14 +422,115 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [isOnline, setIsOnline] = useState<boolean>(true);
-  const [isFirestoreConnected, setIsFirestoreConnected] = useState<boolean>(true);
-  const [firestoreStatus, setFirestoreStatus] = useState<'conectado' | 'conectando' | 'offline'>('conectando');
+  const [isFirestoreConnected, setIsFirestoreConnected] = useState<boolean>(false);
+  const [firestoreStatus, setFirestoreStatus] = useState<'conectado' | 'conectando' | 'offline' | 'no_creada' | 'permiso_denegado'>('conectando');
+  const [firestoreHealth, setFirestoreHealth] = useState<FirestoreHealthResult | null>(null);
+  const [isFirestoreModalOpen, setIsFirestoreModalOpen] = useState<boolean>(false);
   const [selectedPurchase, setSelectedPurchase] = useState<PurchaseRecord | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState<boolean>(false);
   const [purchaseToEdit, setPurchaseToEdit] = useState<PurchaseRecord | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState<boolean>(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
+
+  // Notificador de sincronización entre pestañas en el mismo navegador
+  const notifyTabSync = useCallback((entity: 'purchases' | 'users' | 'catalogs' | 'budget_lines' | 'budget_modifications') => {
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const channel = new BroadcastChannel('oj_compras_realtime_sync');
+        channel.postMessage({ type: 'OJ_SYNC_EVENT', entity, timestamp: Date.now() });
+        channel.close();
+      } catch (err) {
+        // Fallback no crítico
+      }
+    }
+  }, []);
+
+  // Escucha del canal de difusión para sincronización instantánea entre pestañas
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+    const channel = new BroadcastChannel('oj_compras_realtime_sync');
+
+    channel.onmessage = (event) => {
+      if (event.data?.type === 'OJ_SYNC_EVENT') {
+        const { entity } = event.data;
+        if (entity === 'purchases') {
+          const raw = localStorage.getItem(STORAGE_KEYS.PURCHASES);
+          if (raw) {
+            try {
+              setPurchases(JSON.parse(raw));
+            } catch {}
+          }
+        } else if (entity === 'users') {
+          const raw = localStorage.getItem(STORAGE_KEYS.USERS);
+          if (raw) {
+            try {
+              setUsers(JSON.parse(raw));
+            } catch {}
+          }
+        } else if (entity === 'catalogs') {
+          const raw = localStorage.getItem(STORAGE_KEYS.CATALOGS);
+          if (raw) {
+            try {
+              setCatalogs(JSON.parse(raw));
+            } catch {}
+          }
+        } else if (entity === 'budget_lines') {
+          const raw = localStorage.getItem(STORAGE_KEYS.BUDGET_LINES);
+          if (raw) {
+            try {
+              setBudgetLines(JSON.parse(raw));
+            } catch {}
+          }
+        } else if (entity === 'budget_modifications') {
+          const raw = localStorage.getItem(STORAGE_KEYS.BUDGET_MODIFICATIONS);
+          if (raw) {
+            try {
+              setBudgetModifications(JSON.parse(raw));
+            } catch {}
+          }
+        }
+      }
+    };
+
+    return () => {
+      channel.close();
+    };
+  }, []);
+
+  // Verificación y diagnóstico de la base de datos Firestore
+  const checkDatabaseConnection = useCallback(async () => {
+    try {
+      const health = await checkFirestoreHealth();
+      setFirestoreHealth(health);
+      if (health.status === 'conectado') {
+        setIsFirestoreConnected(true);
+        setFirestoreStatus('conectado');
+        seedInitialDataIfEmpty(INITIAL_PURCHASES, INITIAL_CATALOGS, INITIAL_USERS, INITIAL_AUDIT_LOGS).catch(() => {});
+      } else if (health.status === 'no_creada') {
+        setIsFirestoreConnected(false);
+        setFirestoreStatus('no_creada');
+      } else if (health.status === 'permiso_denegado') {
+        setIsFirestoreConnected(false);
+        setFirestoreStatus('permiso_denegado');
+      } else {
+        setIsFirestoreConnected(false);
+        setFirestoreStatus('offline');
+      }
+    } catch {
+      setIsFirestoreConnected(false);
+      setFirestoreStatus('offline');
+    }
+  }, []);
+
+  // Monitoreo periódico de conectividad con Firestore
+  useEffect(() => {
+    checkDatabaseConnection();
+    const interval = setInterval(() => {
+      checkDatabaseConnection();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [checkDatabaseConnection]);
 
   // Sincronización en Tiempo Real Multiusuario con Firebase Firestore
   useEffect(() => {
@@ -476,11 +583,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             });
           });
         }
-        setIsFirestoreConnected(true);
-        setFirestoreStatus('conectado');
+        if (snapshot.metadata.fromCache === false) {
+          setIsFirestoreConnected(true);
+          setFirestoreStatus('conectado');
+        }
       }, (error) => {
         console.warn("Firestore Purchases Listener Error:", error);
-        setFirestoreStatus('offline');
+        checkDatabaseConnection();
       });
     } catch (err) {
       console.warn("No se pudo iniciar listener de compras:", err);
@@ -596,6 +705,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(STORAGE_KEYS.USER_PROFILES, JSON.stringify(userProfiles));
   }, [userProfiles]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    } catch (e) {
+      console.warn("Error guardando usuarios en localStorage:", e);
+    }
+  }, [users]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.CATALOGS, JSON.stringify(catalogs));
+    } catch (e) {
+      console.warn("Error guardando catálogos en localStorage:", e);
+    }
+  }, [catalogs]);
+
+  useEffect(() => {
+    try {
+      const lightweight = purchases.map(p => {
+        if (p.f56Documento?.dataUrl && p.f56Documento.dataUrl.length > 50000) {
+          return {
+            ...p,
+            f56Documento: {
+              ...p.f56Documento,
+              dataUrl: ''
+            }
+          };
+        }
+        return p;
+      });
+      localStorage.setItem(STORAGE_KEYS.PURCHASES, JSON.stringify(lightweight));
+    } catch (e) {
+      console.warn("Error guardando compras en localStorage:", e);
+    }
+  }, [purchases]);
+
   // Hidratación reactiva de documentos adjuntos desde IndexedDB o subcolección de Firestore
   useEffect(() => {
     const unhydrated = purchases.filter(p => 
@@ -687,12 +832,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+        if (!parsed.subtitle || parsed.subtitle === 'Gerencia de Informática') {
+          parsed.subtitle = 'Departamento de Compras';
+        }
         if (parsed.presetId === 'oj_vector' || (parsed.type === 'preset' && !parsed.imageUrl) || !parsed.imageUrl) {
           return {
             ...parsed,
             type: 'custom_image',
             imageUrl: '/organismo_judicial_logo.svg',
-            presetId: 'oj_vector'
+            presetId: 'oj_vector',
+            subtitle: parsed.subtitle || 'Departamento de Compras'
           };
         }
         return parsed;
@@ -1295,7 +1444,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       bitacoraCambios: initialBitacora,
     };
 
-    setPurchases(prev => [newRecord, ...prev]);
+    setPurchases(prev => {
+      const next = [newRecord, ...prev];
+      notifyTabSync('purchases');
+      return next;
+    });
 
     // Respaldo de alta capacidad en IndexedDB para adjuntos pesados
     if (newRecord.f56Documento?.dataUrl) {
@@ -1386,6 +1539,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const updatedList = replaceAll ? newPurchases : [...newPurchases, ...purchases];
     setPurchases(updatedList);
+    notifyTabSync('purchases');
 
     // Guardar en Firestore masivamente por lotes atómicos (optimizado para más de 100 registros)
     saveBatchPurchasesToFirestore(newPurchases).then(res => {
@@ -1512,7 +1666,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fechaModificacion: nowIso,
     };
 
-    setPurchases(prevList => prevList.map(p => p.id === id ? updated : p));
+    setPurchases(prevList => {
+      const nextList = prevList.map(p => p.id === id ? updated : p);
+      notifyTabSync('purchases');
+      return nextList;
+    });
     setSelectedPurchase(curr => (curr && curr.id === id ? updated : curr));
     
     // Respaldo de alta capacidad en IndexedDB para adjuntos
@@ -1646,17 +1804,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const prev = purchases.find(p => p.id === id);
     if (!prev) return;
 
-    setPurchases(prevList => prevList.filter(p => p.id !== id));
+    setPurchases(prevList => {
+      const nextList = prevList.filter(p => p.id !== id);
+      notifyTabSync('purchases');
+      return nextList;
+    });
     
     removePurchaseFromFirestore(id).then(res => {
       if (!res.success) {
         console.warn("Aviso Firestore al eliminar compra:", res.error);
-        setPurchases(prevList => [...prevList, prev]);
+        // Mantenemos la eliminación local sin revertir para garantizar la permanencia de los cambios solicitados por el usuario
         showToast({
-          type: 'error',
-          title: 'Error al Eliminar en Firestore',
-          message: `No se pudo eliminar en Firestore: ${res.error || 'Permiso denegado'}. Verifica las reglas de Firestore.`,
-          duration: 7000
+          type: 'warning',
+          title: 'Compra Eliminada Localmente',
+          message: `El registro NOG ${prev.nog} fue retirado localmente. La sincronización en la nube se completará cuando la base de datos esté lista.`,
+          duration: 5000
         });
       }
     });
@@ -1679,18 +1841,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (count === 0) return { count: 0 };
 
     // Actualizar estado local inmediatamente
-    setPurchases(prevList => prevList.filter(p => !idSet.has(p.id)));
+    setPurchases(prevList => {
+      const nextList = prevList.filter(p => !idSet.has(p.id));
+      notifyTabSync('purchases');
+      return nextList;
+    });
 
     // Eliminar masivamente en Firestore por lotes atómicos
     removeBatchPurchasesFromFirestore(ids).then(res => {
       if (!res.success) {
         console.warn("Aviso Firestore al eliminar compras por lote:", res.error);
-        setPurchases(prevList => [...prevList, ...removedPurchases]);
+        // Mantenemos la eliminación en el cliente sin revertir
         showToast({
-          type: 'error',
-          title: 'Error al Eliminar Lote',
-          message: `No se pudo eliminar el lote en Firestore: ${res.error || 'Permiso denegado'}.`,
-          duration: 7000
+          type: 'warning',
+          title: 'Eliminación Local Confirmada',
+          message: `Se eliminaron las compras en el almacenamiento local. Pendiente de sincronizar con Firebase Console.`,
+          duration: 5000
         });
       }
     }).catch(err => {
@@ -1845,7 +2011,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `usr-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       fechaCreacion: new Date().toISOString(),
     };
-    setUsers(prev => [...prev, newUser]);
+    setUsers(prev => {
+      const next = [...prev, newUser];
+      notifyTabSync('users');
+      return next;
+    });
     saveUserToFirestore(newUser);
     logAudit('CREAR_USUARIO', 'Usuarios', `Creación de usuario: ${newUser.username} con rol ${newUser.rol}`, newUser.id);
     return newUser;
@@ -1855,22 +2025,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const current = users.find(u => u.id === id);
     if (!current) return;
     const updated = { ...current, ...data };
-    setUsers(prev => prev.map(u => u.id === id ? updated : u));
+    setUsers(prev => {
+      const next = prev.map(u => u.id === id ? updated : u);
+      notifyTabSync('users');
+      return next;
+    });
     saveUserToFirestore(updated);
     logAudit('EDITAR_USUARIO', 'Usuarios', `Actualización de usuario ID: ${id}`, id, undefined, data);
   };
 
   const toggleUserStatus = (id: string) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === id) {
-        const nextState = !u.activo;
-        const updated = { ...u, activo: nextState };
-        saveUserToFirestore(updated);
-        logAudit('EDITAR_USUARIO', 'Usuarios', `Cambio de estado de usuario ${u.username} a ${nextState ? 'ACTIVO' : 'INACTIVO'}`, id);
-        return updated;
-      }
-      return u;
-    }));
+    setUsers(prev => {
+      const next = prev.map(u => {
+        if (u.id === id) {
+          const nextState = !u.activo;
+          const updated = { ...u, activo: nextState };
+          saveUserToFirestore(updated);
+          logAudit('EDITAR_USUARIO', 'Usuarios', `Cambio de estado de usuario ${u.username} a ${nextState ? 'ACTIVO' : 'INACTIVO'}`, id);
+          return updated;
+        }
+        return u;
+      });
+      notifyTabSync('users');
+      return next;
+    });
   };
 
   const deleteUser = async (id: string) => {
@@ -1886,29 +2064,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    // Actualización inmediata local para UI fluida
-    setUsers(prev => prev.filter(u => u.id !== id));
+    // Actualización inmediata local para UI fluida y persistencia inmediata
+    setUsers(prev => {
+      const next = prev.filter(u => u.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(next));
+      } catch {}
+      notifyTabSync('users');
+      return next;
+    });
 
     const res = await removeUserFromFirestore(id);
     if (!res.success) {
-      console.error("Error eliminando usuario en Firestore:", res.error);
-      // Revertir en local si la nube rechazó la eliminación
-      setUsers(prev => [...prev, user]);
+      console.warn("Aviso eliminando usuario en Firestore:", res.error);
+      // Mantenemos la eliminación en el cliente sin revertir para cumplir la orden explícita del usuario
       showToast({
-        type: 'error',
-        title: 'Error al Eliminar Usuario',
-        message: `No se pudo eliminar en Firestore: ${res.error || 'Permiso denegado'}. Verifica las Reglas en tu Firebase Console.`,
-        duration: 8000
+        type: 'warning',
+        title: 'Usuario Eliminado Localmente',
+        message: `El usuario "${user.username}" ha sido eliminado localmente. La sincronización en la nube se completará cuando la base de datos esté lista en Firebase Console.`,
+        duration: 6000
       });
-      return;
+    } else {
+      showToast({
+        type: 'info',
+        title: 'Usuario Eliminado',
+        message: `El usuario ${user.username} (${user.nombreCompleto}) ha sido eliminado permanentemente de la base de datos.`,
+        duration: 4000
+      });
     }
-
-    showToast({
-      type: 'info',
-      title: 'Usuario Eliminado',
-      message: `El usuario ${user.username} (${user.nombreCompleto}) ha sido eliminado permanentemente.`,
-      duration: 3500
-    });
     logAudit('EDITAR_USUARIO', 'Usuarios', `Eliminación de usuario: ${user.username}`, id);
   };
 
@@ -2042,7 +2225,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       {
         tipo: 'urgente' as const,
         titulo: 'Visto Bueno Pendiente',
-        mensaje: 'La solicitud F56-e F56-2024-038 requiere Vo.Bo. de la Gerencia de Informática antes de las 16:00 hrs.',
+        mensaje: 'La solicitud F56-e F56-2024-038 requiere Vo.Bo. del Departamento de Compras antes de las 16:00 hrs.',
         categoria: 'aprobacion_vobo' as const,
       },
       {
@@ -2179,14 +2362,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(STORAGE_KEYS.BUDGET_LINES, JSON.stringify(updated));
     const res = await removeBudgetLineFromFirestore(id);
     if (!res.success) {
-      setBudgetLines(budgetLines);
-      localStorage.setItem(STORAGE_KEYS.BUDGET_LINES, JSON.stringify(budgetLines));
+      console.warn("Aviso al eliminar renglón en Firestore:", res.error);
       showToast({
-        title: 'Error al Eliminar Renglón',
-        message: `No se pudo eliminar en Firestore: ${res.error || 'Permiso denegado'}. Verifica tus reglas de Firebase.`,
-        type: 'error'
+        title: 'Renglón Eliminado Localmente',
+        message: `El renglón ${item.renglonPresupuestario} fue removido localmente. Sincronización en la nube pendiente de inicialización en Firebase Console.`,
+        type: 'warning'
       });
-      return;
+    } else {
+      showToast({
+        title: 'Renglón Eliminado',
+        message: `El renglón ${item.renglonPresupuestario} fue removido permanentemente del presupuesto.`,
+        type: 'advertencia'
+      });
     }
 
     logAudit(
@@ -2239,7 +2426,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addNotification({
       tipo: 'exito',
       titulo: 'Presupuesto Actualizado vía Excel',
-      mensaje: `Se procesaron exitosamente ${formatted.length} renglones presupuestarios de la Gerencia de Informática.`,
+      mensaje: `Se procesaron exitosamente ${formatted.length} renglones presupuestarios del Departamento de Compras.`,
       categoria: 'sistema'
     });
 
@@ -2316,21 +2503,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem(STORAGE_KEYS.BUDGET_MODIFICATIONS, JSON.stringify(updated));
     const res = await removeBudgetModificationFromFirestore(id);
     if (!res.success) {
-      setBudgetModifications(budgetModifications);
-      localStorage.setItem(STORAGE_KEYS.BUDGET_MODIFICATIONS, JSON.stringify(budgetModifications));
+      console.warn("Aviso al eliminar modificación presupuestaria en Firestore:", res.error);
       showToast({
-        title: 'Error al Eliminar Modificación',
-        message: `No se pudo eliminar en Firestore: ${res.error || 'Permiso denegado'}. Verifica tus reglas de Firebase.`,
-        type: 'error'
+        title: 'Modificación Eliminada Localmente',
+        message: `Se eliminó la modificación ${item.correlativo || id} localmente. Sincronización en la nube pendiente de inicialización en Firebase Console.`,
+        type: 'warning'
       });
-      return;
+    } else {
+      showToast({
+        title: 'Modificación Eliminada',
+        message: `Se eliminó la modificación presupuestaria ${item.correlativo || id} permanentemente.`,
+        type: 'advertencia'
+      });
     }
-
-    showToast({
-      title: 'Modificación Eliminada',
-      message: `Se eliminó la modificación presupuestaria ${item.correlativo || id}.`,
-      type: 'advertencia'
-    });
   };
 
   const approveBudgetModification = (id: string) => {
@@ -2503,6 +2688,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isOnline,
         isFirestoreConnected,
         firestoreStatus,
+        firestoreHealth,
+        checkDatabaseConnection,
+        isFirestoreModalOpen,
+        setIsFirestoreModalOpen,
         refreshPurchases,
         selectedPurchase,
         setSelectedPurchase,

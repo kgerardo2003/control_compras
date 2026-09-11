@@ -367,7 +367,7 @@ export const BudgetModificationModal: React.FC<BudgetModificationModalProps> = (
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               rows={3}
-              placeholder="Explique el motivo del ajuste presupuestario para la Gerencia de Informática..."
+              placeholder="Explique el motivo del ajuste presupuestario para el Departamento de Compras..."
               required
               className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-normal focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />

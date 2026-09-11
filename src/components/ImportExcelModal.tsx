@@ -259,7 +259,7 @@ export const ImportExcelModal: React.FC = () => {
           fechaAdjudicacion,
           proveedorAdjudicado,
           categoriaTecnologica: 'Equipo Informático',
-          dependenciaSolicitante: 'Gerencia de Informática',
+          dependenciaSolicitante: 'Departamento de Compras',
           modalidadCompra: 'Cotización',
           observaciones,
         };
@@ -443,7 +443,7 @@ export const ImportExcelModal: React.FC = () => {
                 </span>
               </h3>
               <p className="text-xs text-slate-300">
-                Carga masiva de expedientes para la Gerencia de Informática
+                Carga masiva de expedientes para el Departamento de Compras
               </p>
             </div>
           </div>

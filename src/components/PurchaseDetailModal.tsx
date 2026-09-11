@@ -490,7 +490,7 @@ export const PurchaseDetailModal: React.FC = () => {
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                   Dependencia Solicitante:
                 </span>
-                <span className="font-semibold text-slate-800">{selectedPurchase.dependenciaSolicitante || 'Gerencia de Informática'}</span>
+                <span className="font-semibold text-slate-800">{selectedPurchase.dependenciaSolicitante || 'Departamento de Compras'}</span>
               </div>
               <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50/60">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">

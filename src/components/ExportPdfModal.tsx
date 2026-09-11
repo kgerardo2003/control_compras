@@ -124,7 +124,7 @@ export const ExportPdfModal: React.FC<ExportPdfModalProps> = ({
                 </div>
                 <div>
                   <h4 className="text-xs font-black tracking-wide text-white uppercase">Organismo Judicial de Guatemala</h4>
-                  <p className="text-[10px] font-bold text-amber-400">Gerencia de Informática</p>
+                  <p className="text-[10px] font-bold text-amber-400">Departamento de Compras</p>
                   <p className="text-[9px] text-slate-300">Sistema Integral de Control de Adquisiciones de TI</p>
                 </div>
               </div>

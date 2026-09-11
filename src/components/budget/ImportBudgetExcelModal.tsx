@@ -226,7 +226,7 @@ export const ImportBudgetExcelModal: React.FC<ImportBudgetExcelModalProps> = ({ 
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 Importar Presupuesto Institucional desde Excel
                 <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-emerald-500/30 text-emerald-300 font-semibold">
-                  Gerencia de Informática
+                  Departamento de Compras
                 </span>
               </h3>
               <p className="text-xs text-slate-400">

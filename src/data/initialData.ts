@@ -68,8 +68,8 @@ export const INITIAL_USERS: User[] = [
     password: 'Guate2026*',
     rol: 'administrador',
     perfilId: 'prof-admin',
-    cargo: 'Gerente de Informática',
-    departamento: 'Gerencia de Informática - OJ',
+    cargo: 'Jefe de Compras',
+    departamento: 'Departamento de Compras - OJ',
     activo: true,
     fechaCreacion: '2024-01-10T08:00:00Z',
     ultimoAcceso: '2026-09-03T14:15:00Z',
@@ -123,7 +123,7 @@ export const INITIAL_CATALOGS: Catalog[] = [
     id: 'cat-estatus',
     codigo: 'ESTATUS_EVENTO',
     nombre: 'Estatus del Evento',
-    descripcion: 'Estados oficiales de los eventos de adquisiciones según matriz de la Gerencia de Informática',
+    descripcion: 'Estados oficiales de los eventos de adquisiciones según matriz del Departamento de Compras',
     esSistema: true,
     items: [
       { id: 'est-reg', codigo: 'REGISTRADA', valor: 'Registrada', descripcion: 'Evento registrado en sistema, compromete preventivamente saldo (Afecta: Sí)', activo: true, color: 'blue' },
@@ -144,7 +144,7 @@ export const INITIAL_CATALOGS: Catalog[] = [
     id: 'cat-evaluado-git',
     codigo: 'EVALUADO_GIT',
     nombre: 'Evaluado por la GIT',
-    descripcion: 'Dictamen técnico y validación por la Gerencia de Informática',
+    descripcion: 'Dictamen técnico y validación por el Departamento de Compras',
     esSistema: true,
     items: [
       { id: 'git-1', codigo: 'SI', valor: 'Sí', descripcion: 'Cuenta con dictamen técnico favorable de la GIT', activo: true, color: 'emerald' },
@@ -155,7 +155,7 @@ export const INITIAL_CATALOGS: Catalog[] = [
     id: 'cat-areas',
     codigo: 'AREA_SOLICITANTE',
     nombre: 'Área Solicitante',
-    descripcion: 'Áreas y unidades técnicas de la Gerencia de Informática y del Organismo Judicial',
+    descripcion: 'Áreas y dependencias del Departamento de Compras y del Organismo Judicial',
     esSistema: false,
     items: [
       { id: 'area-1', codigo: 'SOPORTE_TECNICO', valor: 'Soporte técnico', descripcion: 'Atención presencial a usuarios y juzgados', activo: true, color: 'teal' },

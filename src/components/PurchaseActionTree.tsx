@@ -165,22 +165,22 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
     const rama2Nodes: TreeNodeItem[] = [
       {
         id: 'node-git-evaluacion',
-        titulo: 'Revisión Técnica por Gerencia de Informática (GIT)',
+        titulo: 'Revisión Técnica por Departamento de Compras',
         subtitulo: 'Verificación de estándares, arquitectura y compatibilidad',
         fecha: purchase.fechaDictamenGIT || purchase.fechaSolicitud,
-        responsable: 'Gerencia de Informática - GIT',
+        responsable: 'Departamento de Compras',
         estado: evaluado ? 'completado' : 'en_proceso',
         tipo: 'hito',
         observaciones: evaluado 
-          ? 'Expediente analizado por los especialistas de GIT y calificado técnicamente viable.' 
-          : 'En proceso de evaluación técnica por el equipo de ingeniería GIT.'
+          ? 'Expediente analizado por los especialistas y calificado técnicamente viable.' 
+          : 'En proceso de evaluación técnica por el equipo de compras e ingeniería.'
       },
       {
         id: 'node-git-dictamen',
         titulo: 'Emisión de Dictamen Técnico Oficial',
         subtitulo: 'Resolución técnica vinculante para compras TI',
         fecha: purchase.fechaDictamenGIT || undefined,
-        responsable: 'Gerencia de Informática',
+        responsable: 'Departamento de Compras',
         estado: purchase.fechaDictamenGIT ? 'completado' : evaluado ? 'en_proceso' : 'pendiente',
         tipo: 'hito',
         observaciones: purchase.fechaDictamenGIT 
@@ -190,14 +190,14 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
       },
       {
         id: 'node-git-oficio',
-        titulo: 'Oficio de Traslado GIT hacia Dirección de Compras',
+        titulo: 'Oficio de Traslado y Gestión de Compra',
         subtitulo: 'Remisión de expediente dictaminado para contratación',
         fecha: purchase.fechaElaboracionOficioGIT || undefined,
-        responsable: 'Gerencia de Informática - GIT',
+        responsable: 'Departamento de Compras',
         estado: purchase.fechaElaboracionOficioGIT ? 'completado' : 'pendiente',
         tipo: 'hito',
         observaciones: purchase.fechaElaboracionOficioGIT 
-          ? `Oficio técnico elaborado y remitido a Compras el ${formatDate(purchase.fechaElaboracionOficioGIT)}.` 
+          ? `Oficio técnico elaborado y tramitado el ${formatDate(purchase.fechaElaboracionOficioGIT)}.` 
           : 'Pendiente de elaboración de oficio de traslado.',
         documentoRef: purchase.fechaElaboracionOficioGIT ? `Oficio GIT: ${purchase.fechaElaboracionOficioGIT}` : undefined
       }
@@ -571,7 +571,7 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
-                Formulario F56-e: {purchase.f56e || 'Borrador'} • {purchase.dependenciaSolicitante || 'Gerencia de Informática'}
+                Formulario F56-e: {purchase.f56e || 'Borrador'} • {purchase.dependenciaSolicitante || 'Departamento de Compras'}
               </p>
             </div>
           </div>

@@ -343,7 +343,7 @@ export function generatePurchasesPDF(options: ExportPurchasesPDFOptions): string
 
     // Texto izquierdo del pie
     doc.text(
-      'Documento oficial de control y auditoría interna • Gerencia de Informática • Organismo Judicial de Guatemala',
+      'Documento oficial de control y auditoría interna • Departamento de Compras • Organismo Judicial de Guatemala',
       marginX,
       pageHeight - 6
     );

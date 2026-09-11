@@ -34,7 +34,7 @@ export const CustomizationView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'themes' | 'logo'>('themes');
   const [urlInput, setUrlInput] = useState('');
   const [titleInput, setTitleInput] = useState(customLogo.title || 'Organismo Judicial');
-  const [subtitleInput, setSubtitleInput] = useState(customLogo.subtitle || 'Gerencia de Informática');
+  const [subtitleInput, setSubtitleInput] = useState(customLogo.subtitle || 'Departamento de Compras');
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -145,7 +145,7 @@ export const CustomizationView: React.FC = () => {
     setCustomLogo(prev => ({
       ...prev,
       title: titleInput.trim() || 'Organismo Judicial',
-      subtitle: subtitleInput.trim() || 'Gerencia de Informática'
+      subtitle: subtitleInput.trim() || 'Departamento de Compras'
     }));
     logAudit('EDITAR_COMPRA', 'Sistema', 'Títulos de logotipo institucional modificados.');
     showFeedback('Textos institucionales actualizados correctamente.');
@@ -661,7 +661,7 @@ export const CustomizationView: React.FC = () => {
                   type="text"
                   value={subtitleInput}
                   onChange={(e) => setSubtitleInput(e.target.value)}
-                  placeholder="Gerencia de Informática"
+                  placeholder="Departamento de Compras"
                   className="w-full p-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
                 />
               </div>
