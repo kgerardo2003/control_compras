@@ -60,23 +60,34 @@ export interface StatusTimelineEvent {
   automatico?: boolean; // Flag de registro automático sellado por el sistema
 }
 
+export interface PurchaseObservationEntry {
+  id: string;
+  fechaHora: string; // Timestamp ISO exacto
+  fecha: string;     // YYYY-MM-DD
+  hora: string;      // HH:mm
+  usuario: string;   // Nombre completo o username del usuario
+  rol?: string;      // Rol institucional
+  comentario: string;// Texto de la observación
+}
+
 export interface PurchaseRecord {
   id: string;
   descripcion: string; // Max 200
   f56e: string;        // Forma F56-e (ej. 00001, 00001-2026, 000001-2026)
   f56?: string;        // Formulario F56 físico (opcional)
   f56Documento?: AttachedDocument; // Documento físico/digital de la F56 adjunto
-  fechaSolicitud: string;   // YYYY-MM-DD
-  fechaVoBo: string;        // YYYY-MM-DD
-  fechaAutorizado: string;  // YYYY-MM-DD
+  fechaRecepcion?: string;  // YYYY-MM-DD Fecha de Recepción (Sustituye fechaSolicitud, fechaVoBo, fechaAutorizado)
+  fechaSolicitud?: string;  // YYYY-MM-DD (compatibilidad con datos previos)
+  fechaVoBo?: string;       // YYYY-MM-DD (compatibilidad histórica)
+  fechaAutorizado?: string; // YYYY-MM-DD (compatibilidad histórica)
   nog: string;              // 8 digits numeric
   fechaPublicacion: string; // YYYY-MM-DD
   fechaOfertas: string;     // YYYY-MM-DD
   cantidadOfertas: number;  // Numeric >= 0
   monto: number;            // Quetzales (GTQ)
-  evaluadoGIT: EvaluacionGIT; // Sí | No
-  fechaDictamenGIT?: string; // Fecha en que se realizó el dictamen técnico por la GIT (YYYY-MM-DD)
-  fechaElaboracionOficioGIT?: string; // Fecha en que la Gerencia de Informática elaboró el oficio hacia compras (YYYY-MM-DD)
+  evaluadoGIT?: EvaluacionGIT; // Sí | No (opcional / histórico)
+  fechaDictamenGIT?: string; // Fecha dictamen técnico (opcional / histórico)
+  fechaElaboracionOficioGIT?: string; // Fecha oficio compras (opcional / histórico)
   estatusEvento: string;    // Evaluación | Adjudicación | Prescindido | Desierto or custom
   fechaAdjudicacion?: string; // Fecha en que se adjudicó el evento (YYYY-MM-DD)
   areaSolicitante?: string;
@@ -89,6 +100,7 @@ export interface PurchaseRecord {
   modificadoPor?: string;
   fechaModificacion?: string;
   observaciones?: string;
+  observacionesList?: PurchaseObservationEntry[]; // Registro de observaciones individuales en la hoja de ruta
   historialEstatus?: StatusTimelineEvent[]; // Línea de tiempo de tracking y cambios de estatus del evento
   renglonPresupuestario?: string; // Ej: "158", "328", "121"
   grupoPresupuestario?: string; // Ej: "Grupo 100 - Servicios No Personales"

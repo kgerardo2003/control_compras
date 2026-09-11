@@ -88,7 +88,7 @@ Organismo Judicial de Guatemala`;
                 ORGANISMO JUDICIAL DE GUATEMALA
               </h1>
               <p style="color: #93c5fd; margin: 6px 0 0; font-size: 13px; font-weight: 600;">
-                GERENCIA DE INFORMÁTICA
+                DEPARTAMENTO DE COMPRAS
               </p>
               <p style="color: #cbd5e1; margin: 4px 0 0; font-size: 11px;">
                 Sistema de Control de Adquisiciones y Formularios F56-e
@@ -177,7 +177,7 @@ Organismo Judicial de Guatemala`;
                 Sistema de Control de Compras &bull; Departamento de Compras
               </p>
               <p style="margin: 0; font-weight: 600; color: #475569;">
-                Creador del Sistema: Lic. Kevin Gerardo López de León
+                Creador del Sistema: KGLD
               </p>
             </td>
           </tr>

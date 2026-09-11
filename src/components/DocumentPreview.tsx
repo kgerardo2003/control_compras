@@ -256,8 +256,8 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
           <div className="border-t border-slate-200 pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
             <div>
               <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Firma y Dictamen Digital</p>
-              <p className="text-xs font-bold text-slate-800">Lic. Kevin Gerardo López de León</p>
-              <p className="text-[11px] text-slate-500">Gerente de Informática - OJ</p>
+              <p className="text-xs font-bold text-slate-800">KGLD</p>
+              <p className="text-[11px] text-slate-500">Departamento de Compras - OJ</p>
             </div>
 
             <div className="border border-amber-300 bg-amber-50 rounded-lg p-2 max-w-xs text-center">

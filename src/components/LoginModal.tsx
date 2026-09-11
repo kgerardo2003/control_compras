@@ -175,7 +175,7 @@ export const LoginModal: React.FC = () => {
               <span>Acceso oficial restringido. Sesión registrada en bitácora de auditoría.</span>
             </div>
             <p className="text-[11px] text-slate-600 font-medium">
-              Creador del Sistema: <strong className="text-slate-900 font-bold">Lic. Kevin Gerardo López de León</strong>
+              Creador del Sistema: <strong className="text-slate-900 font-bold">KGLD</strong>
             </p>
           </div>
 

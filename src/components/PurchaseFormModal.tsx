@@ -20,9 +20,13 @@ import {
   GitBranch,
   FolderTree,
   Loader2,
-  ListTree
+  ListTree,
+  Plus,
+  MessageSquare,
+  User as UserIcon,
+  Clock
 } from 'lucide-react';
-import { EvaluacionGIT, AttachedDocument, PurchaseRecord } from '../types';
+import { EvaluacionGIT, AttachedDocument, PurchaseRecord, PurchaseObservationEntry } from '../types';
 import { formatQuetzales, getModalidadCompraByMonto } from '../utils/formatters';
 import { doesStatusAffectBudget } from '../data/budgetStandardCatalog';
 import { DocumentPreview } from './DocumentPreview';
@@ -67,10 +71,11 @@ export const PurchaseFormModal: React.FC = () => {
     updatePurchase, 
     catalogs,
     themeConfig,
-    budgetAvailability
+    budgetAvailability,
+    currentUser
   } = useApp();
 
-  // Estados del Formulario (Validaciones de longitud y tipos requeridos)
+  // Estados del Formulario
   const [modalTab, setModalTab] = useState<'formulario' | 'arbol'>('formulario');
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [descripcion, setDescripcion] = useState('');
@@ -81,29 +86,27 @@ export const PurchaseFormModal: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [fechaSolicitud, setFechaSolicitud] = useState('');
-  const [fechaVoBo, setFechaVoBo] = useState('');
-  const [fechaAutorizado, setFechaAutorizado] = useState('');
+  // Fechas: solo Fecha Recepción en la ficha, y Fecha de Adjudicación después de ofertas
+  const [fechaRecepcion, setFechaRecepcion] = useState('');
   const [nog, setNog] = useState('');
   const [fechaPublicacion, setFechaPublicacion] = useState('');
   const [fechaOfertas, setFechaOfertas] = useState('');
+  const [fechaAdjudicacion, setFechaAdjudicacion] = useState<string>('');
   const [cantidadOfertas, setCantidadOfertas] = useState<number>(0);
   const [monto, setMonto] = useState<number | ''>('');
   const [montoInput, setMontoInput] = useState<string>('');
   const [renglonPresupuestario, setRenglonPresupuestario] = useState<string>('158');
   const [estadoPago, setEstadoPago] = useState<'comprometido' | 'pagado'>('comprometido');
-  const [evaluadoGIT, setEvaluadoGIT] = useState<EvaluacionGIT>('Sí');
-  const [fechaDictamenGIT, setFechaDictamenGIT] = useState<string>('');
-  const [fechaElaboracionOficioGIT, setFechaElaboracionOficioGIT] = useState<string>('');
   const [showDocumentPreview, setShowDocumentPreview] = useState<boolean>(true);
   const [estatusEvento, setEstatusEvento] = useState<string>('Evaluación');
-  const [fechaAdjudicacion, setFechaAdjudicacion] = useState<string>('');
-  const [areaSolicitante, setAreaSolicitante] = useState('Soporte técnico');
   const [categoriaTecnologica, setCategoriaTecnologica] = useState('');
   const [dependenciaSolicitante, setDependenciaSolicitante] = useState('');
   const [modalidadCompra, setModalidadCompra] = useState('Cotización Pública');
   const [proveedorAdjudicado, setProveedorAdjudicado] = useState('');
-  const [observaciones, setObservaciones] = useState('');
+  
+  // Observaciones registradas una a una con autor y persistencia en hoja de ruta
+  const [observacionesList, setObservacionesList] = useState<PurchaseObservationEntry[]>([]);
+  const [nuevaObservacion, setNuevaObservacion] = useState('');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -163,57 +166,63 @@ export const PurchaseFormModal: React.FC = () => {
           }
         });
       }
-      setFechaSolicitud(purchaseToEdit.fechaSolicitud || '');
-      setFechaVoBo(purchaseToEdit.fechaVoBo || '');
-      setFechaAutorizado(purchaseToEdit.fechaAutorizado || '');
+      setFechaRecepcion(purchaseToEdit.fechaRecepcion || purchaseToEdit.fechaSolicitud || '');
       setNog(purchaseToEdit.nog || '');
       setFechaPublicacion(purchaseToEdit.fechaPublicacion || '');
       setFechaOfertas(purchaseToEdit.fechaOfertas || '');
+      setFechaAdjudicacion(purchaseToEdit.fechaAdjudicacion || '');
       setCantidadOfertas(purchaseToEdit.cantidadOfertas ?? 0);
       setMonto(purchaseToEdit.monto ?? '');
       setMontoInput(purchaseToEdit.monto !== undefined && purchaseToEdit.monto !== null && purchaseToEdit.monto !== '' ? formatMontoMask(purchaseToEdit.monto) : '');
       setRenglonPresupuestario(purchaseToEdit.renglonPresupuestario || (budgetAvailability[0]?.renglonPresupuestario || '158'));
       setEstadoPago(purchaseToEdit.estadoPago || 'comprometido');
-      setEvaluadoGIT(purchaseToEdit.evaluadoGIT || 'Sí');
-      setFechaDictamenGIT(purchaseToEdit.fechaDictamenGIT || '');
-      setFechaElaboracionOficioGIT(purchaseToEdit.fechaElaboracionOficioGIT || '');
       setShowDocumentPreview(true);
       setEstatusEvento(purchaseToEdit.estatusEvento || 'Evaluación');
-      setFechaAdjudicacion(purchaseToEdit.fechaAdjudicacion || '');
-      setAreaSolicitante(purchaseToEdit.areaSolicitante || areaOptions[0] || 'Soporte técnico');
       setCategoriaTecnologica(purchaseToEdit.categoriaTecnologica || categoryOptions[0] || '');
       setDependenciaSolicitante(purchaseToEdit.dependenciaSolicitante || dependencyOptions[0] || '');
       setModalidadCompra(purchaseToEdit.modalidadCompra || modalityOptions[0] || 'Cotización Pública');
       setProveedorAdjudicado(purchaseToEdit.proveedorAdjudicado || '');
-      setObservaciones(purchaseToEdit.observaciones || '');
+      
+      // Cargar lista de observaciones registradas una a una
+      if (purchaseToEdit.observacionesList && purchaseToEdit.observacionesList.length > 0) {
+        setObservacionesList(purchaseToEdit.observacionesList);
+      } else if (purchaseToEdit.observaciones) {
+        setObservacionesList([{
+          id: `obs_init_${purchaseToEdit.id}`,
+          fechaHora: purchaseToEdit.fechaCreacion || new Date().toISOString(),
+          fecha: (purchaseToEdit.fechaCreacion || new Date().toISOString()).slice(0, 10),
+          hora: '08:00',
+          usuario: purchaseToEdit.creadoPor || 'Sistema',
+          rol: 'Registrador',
+          comentario: purchaseToEdit.observaciones
+        }]);
+      } else {
+        setObservacionesList([]);
+      }
+      setNuevaObservacion('');
     } else {
       const today = new Date().toISOString().slice(0, 10);
       setDescripcion('');
       setF56e('');
       setF56('');
       setF56Documento(null);
-      setFechaSolicitud(today);
-      setFechaVoBo('');
-      setFechaAutorizado('');
+      setFechaRecepcion(today);
       setNog('');
       setFechaPublicacion('');
       setFechaOfertas('');
+      setFechaAdjudicacion('');
       setCantidadOfertas(0);
       setMonto('');
       setRenglonPresupuestario(budgetAvailability[0]?.renglonPresupuestario || '158');
       setEstadoPago('comprometido');
-      setEvaluadoGIT('Sí');
-      setFechaDictamenGIT('');
-      setFechaElaboracionOficioGIT('');
       setShowDocumentPreview(true);
       setEstatusEvento('Evaluación');
-      setFechaAdjudicacion('');
-      setAreaSolicitante(areaOptions[0] || 'Soporte técnico');
       setCategoriaTecnologica(categoryOptions[0] || 'Servidores y Almacenamiento');
       setDependenciaSolicitante(dependencyOptions[0] || 'Subgerencia de Infraestructura GIT');
       setModalidadCompra('Cotización Pública');
       setProveedorAdjudicado('');
-      setObservaciones('');
+      setObservacionesList([]);
+      setNuevaObservacion('');
     }
     setErrors({});
     setFileUploadError(null);
@@ -229,30 +238,26 @@ export const PurchaseFormModal: React.FC = () => {
       f56e: f56e.trim(),
       f56: f56.trim(),
       f56Documento: f56Documento || undefined,
-      fechaSolicitud,
-      fechaVoBo,
-      fechaAutorizado,
+      fechaRecepcion,
+      fechaSolicitud: fechaRecepcion,
       nog: nog.trim(),
       fechaPublicacion,
       fechaOfertas,
+      fechaAdjudicacion: fechaAdjudicacion || undefined,
       cantidadOfertas: Number(cantidadOfertas) || 0,
       monto: Number(monto) || 0,
       renglonPresupuestario,
       estadoPago,
-      evaluadoGIT,
-      fechaDictamenGIT: evaluadoGIT === 'Sí' ? fechaDictamenGIT : '',
-      fechaElaboracionOficioGIT: evaluadoGIT === 'Sí' ? fechaElaboracionOficioGIT : '',
       estatusEvento,
-      fechaAdjudicacion: estatusEvento === 'Adjudicación' ? fechaAdjudicacion : undefined,
-      areaSolicitante,
       categoriaTecnologica,
       dependenciaSolicitante,
       modalidadCompra: getModalidadCompraByMonto(Number(monto) || 0).nombre,
       proveedorAdjudicado: proveedorAdjudicado.trim() || undefined,
-      observaciones: observaciones.trim() || undefined,
+      observaciones: observacionesList.map(o => `${o.usuario}: ${o.comentario}`).join(' | ') || undefined,
+      observacionesList,
       bitacoraCambios: purchaseToEdit?.bitacoraCambios || [],
       historialEstatus: purchaseToEdit?.historialEstatus || [],
-      creadoPor: purchaseToEdit?.creadoPor || 'Operador Actual',
+      creadoPor: purchaseToEdit?.creadoPor || currentUser?.nombreCompleto || currentUser?.username || 'Operador Actual',
       fechaCreacion: purchaseToEdit?.fechaCreacion || new Date().toISOString()
     };
   }, [
@@ -261,26 +266,21 @@ export const PurchaseFormModal: React.FC = () => {
     f56e,
     f56,
     f56Documento,
-    fechaSolicitud,
-    fechaVoBo,
-    fechaAutorizado,
+    fechaRecepcion,
     nog,
     fechaPublicacion,
     fechaOfertas,
+    fechaAdjudicacion,
     cantidadOfertas,
     monto,
     renglonPresupuestario,
     estadoPago,
-    evaluadoGIT,
-    fechaDictamenGIT,
-    fechaElaboracionOficioGIT,
     estatusEvento,
-    fechaAdjudicacion,
-    areaSolicitante,
     categoriaTecnologica,
     dependenciaSolicitante,
     proveedorAdjudicado,
-    observaciones
+    observacionesList,
+    currentUser
   ]);
 
   // Manejo de archivo adjunto F56
@@ -395,6 +395,27 @@ export const PurchaseFormModal: React.FC = () => {
     }
   };
 
+  // Agregar observación individual con usuario y fecha/hora
+  const handleAddObservation = () => {
+    if (!nuevaObservacion.trim()) return;
+    const now = new Date();
+    const newEntry: PurchaseObservationEntry = {
+      id: `obs_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      fechaHora: now.toISOString(),
+      fecha: now.toISOString().slice(0, 10),
+      hora: now.toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      usuario: currentUser?.nombreCompleto || currentUser?.username || 'Usuario Actual',
+      rol: currentUser?.rol || 'Usuario',
+      comentario: nuevaObservacion.trim()
+    };
+    setObservacionesList(prev => [...prev, newEntry]);
+    setNuevaObservacion('');
+  };
+
+  const handleRemoveObservation = (obsId: string) => {
+    setObservacionesList(prev => prev.filter(o => o.id !== obsId));
+  };
+
   if (!isPurchaseModalOpen) return null;
 
   // Validación estricta de campos según el requerimiento
@@ -422,9 +443,9 @@ export const PurchaseFormModal: React.FC = () => {
       newErrors.f56 = 'El campo F56 no puede exceder 6 posiciones.';
     }
 
-    // 4. Fechas
-    if (!fechaSolicitud) {
-      newErrors.fechaSolicitud = 'La Fecha de Solicitud es obligatoria.';
+    // 4. Fecha de Recepción (obligatoria, sustituye solicitud, vo.bo. y autorización)
+    if (!fechaRecepcion) {
+      newErrors.fechaRecepcion = 'La Fecha de Recepción es obligatoria.';
     }
 
     // 5. NOG: numérico de 8 dígitos
@@ -447,13 +468,8 @@ export const PurchaseFormModal: React.FC = () => {
       newErrors.cantidadOfertas = 'La cantidad de ofertas debe ser mayor o igual a 0.';
     }
 
-    // 8. Fecha de dictamen técnico por la GIT
-    if (evaluadoGIT === 'Sí' && !fechaDictamenGIT) {
-      newErrors.fechaDictamenGIT = 'Ingrese la fecha en que se realizó el dictamen técnico por la GIT.';
-    }
-
-    // 9. Fecha de adjudicación (si el estatus es Adjudicación)
-    if (estatusEvento === 'Adjudicación' && !fechaAdjudicacion) {
+    // 8. Fecha de adjudicación (si el estatus es Adjudicación o Adjudicada)
+    if ((estatusEvento === 'Adjudicación' || estatusEvento === 'Adjudicada') && !fechaAdjudicacion) {
       newErrors.fechaAdjudicacion = 'Ingrese la fecha en que se adjudicó el evento.';
     }
 
@@ -474,34 +490,45 @@ export const PurchaseFormModal: React.FC = () => {
     const selectedLine = budgetAvailability.find(l => l.renglonPresupuestario === renglonPresupuestario);
     const isRenglon113 = renglonPresupuestario === '113';
 
+    // Si el usuario escribió una observación pero no hizo clic en agregar, incluirla automáticamente
+    let finalObservacionesList = [...observacionesList];
+    if (nuevaObservacion.trim()) {
+      const now = new Date();
+      finalObservacionesList.push({
+        id: `obs_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        fechaHora: now.toISOString(),
+        fecha: now.toISOString().slice(0, 10),
+        hora: now.toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', hour12: false }),
+        usuario: currentUser?.nombreCompleto || currentUser?.username || 'Usuario Actual',
+        rol: currentUser?.rol || 'Usuario',
+        comentario: nuevaObservacion.trim()
+      });
+    }
+
     const recordData = {
       descripcion: descripcion.trim(),
       f56e: f56e.trim(),
       f56: f56.trim() || undefined,
       f56Documento: f56Documento || undefined,
-      fechaSolicitud,
-      fechaVoBo: fechaVoBo || '',
-      fechaAutorizado: fechaAutorizado || '',
+      fechaRecepcion,
+      fechaSolicitud: fechaRecepcion,
       nog: nog.trim(),
       fechaPublicacion: fechaPublicacion || '',
       fechaOfertas: fechaOfertas || '',
+      fechaAdjudicacion: fechaAdjudicacion || '',
       cantidadOfertas: Number(cantidadOfertas),
       monto: Number(monto),
       renglonPresupuestario,
       grupoPresupuestario: selectedLine?.grupoPresupuestario || (isRenglon113 ? 'Grupo 100 - Servicios No Personales' : ''),
       nombreRenglon: selectedLine?.nombreRenglon || (isRenglon113 ? 'Telefonía (Referencia - Gerencia Administrativa)' : ''),
       estadoPago,
-      evaluadoGIT,
-      fechaDictamenGIT: evaluadoGIT === 'Sí' ? fechaDictamenGIT : '',
-      fechaElaboracionOficioGIT: evaluadoGIT === 'Sí' ? fechaElaboracionOficioGIT : '',
       estatusEvento,
-      fechaAdjudicacion: estatusEvento === 'Adjudicación' ? fechaAdjudicacion : undefined,
-      areaSolicitante,
       categoriaTecnologica,
       dependenciaSolicitante,
       modalidadCompra: getModalidadCompraByMonto(monto).nombre,
       proveedorAdjudicado: proveedorAdjudicado.trim() || undefined,
-      observaciones: observaciones.trim() || undefined,
+      observaciones: finalObservacionesList.map(o => `${o.usuario}: ${o.comentario}`).join(' | ') || undefined,
+      observacionesList: finalObservacionesList,
       historialEstatus: purchaseToEdit?.historialEstatus,
     };
 
@@ -671,28 +698,6 @@ export const PurchaseFormModal: React.FC = () => {
                 <p className="text-[10px] text-rose-600 mt-1 font-semibold">{errors.descripcion}</p>
               )}
             </div>
-
-            {/* Campo: Área Solicitante */}
-            <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">
-                Área Solicitante <span className="text-rose-600">*</span>
-              </label>
-              <select
-                id="select-purchase-area-solicitante"
-                value={areaSolicitante}
-                onChange={(e) => setAreaSolicitante(e.target.value)}
-                className="w-full p-2 text-xs font-semibold border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 text-slate-800 cursor-pointer"
-              >
-                {areaOptions.map((area) => (
-                  <option key={area} value={area}>
-                    {area}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[10px] text-slate-400 mt-0.5">
-                Área técnica o sección GIT requirente del bien o servicio.
-              </p>
-            </div>
           </div>
 
           {/* SECCIÓN 2: FORMULARIOS F56-e Y F56 */}
@@ -758,60 +763,26 @@ export const PurchaseFormModal: React.FC = () => {
               </div>
             </div>
 
-            {/* Fechas de Gestión */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-200">
-              
-              {/* Fecha Solicitud */}
-              <div>
-                <label htmlFor="input-purchase-fecha-solicitud" className="block text-xs font-bold text-slate-800 mb-1">
-                  Fecha de Solicitud <span className="text-rose-600">*</span>
-                </label>
-                <input
-                  id="input-purchase-fecha-solicitud"
-                  type="date"
-                  value={fechaSolicitud}
-                  onChange={(e) => setFechaSolicitud(e.target.value)}
-                  className={`w-full p-2 text-xs border rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 ${
-                    errors.fechaSolicitud ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300'
-                  }`}
-                />
-                {errors.fechaSolicitud ? (
-                  <p className="text-[10px] text-rose-600 mt-1 font-semibold">{errors.fechaSolicitud}</p>
-                ) : (
-                  <p className="text-[10px] text-slate-400 mt-0.5">Fecha oficial de solicitud</p>
-                )}
-              </div>
-
-              {/* Fecha Vo.Bo. */}
-              <div>
-                <label htmlFor="input-purchase-fecha-vobo" className="block text-xs font-bold text-slate-800 mb-1">
-                  Fecha Vo.Bo.
-                </label>
-                <input
-                  id="input-purchase-fecha-vobo"
-                  type="date"
-                  value={fechaVoBo}
-                  onChange={(e) => setFechaVoBo(e.target.value)}
-                  className="w-full p-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
-                />
-                <p className="text-[10px] text-slate-400 mt-0.5">Visto Bueno de jefatura</p>
-              </div>
-
-              {/* Fecha Autorizado */}
-              <div>
-                <label htmlFor="input-purchase-fecha-autorizado" className="block text-xs font-bold text-slate-800 mb-1">
-                  Fecha de Autorizado
-                </label>
-                <input
-                  id="input-purchase-fecha-autorizado"
-                  type="date"
-                  value={fechaAutorizado}
-                  onChange={(e) => setFechaAutorizado(e.target.value)}
-                  className="w-full p-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
-                />
-                <p className="text-[10px] text-slate-400 mt-0.5">Aprobación del formulario</p>
-              </div>
-
+            {/* Fecha de Recepción (Sustituye fecha de solicitud, vo.bo. y autorización) */}
+            <div className="pt-2 border-t border-slate-200">
+              <label htmlFor="input-purchase-fecha-recepcion" className="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                <span>Fecha de Recepción <span className="text-rose-600">*</span></span>
+              </label>
+              <input
+                id="input-purchase-fecha-recepcion"
+                type="date"
+                value={fechaRecepcion}
+                onChange={(e) => setFechaRecepcion(e.target.value)}
+                className={`w-full sm:w-1/2 p-2 text-xs border rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white ${
+                  errors.fechaRecepcion ? 'border-rose-400 bg-rose-50/20' : 'border-slate-300'
+                }`}
+              />
+              {errors.fechaRecepcion ? (
+                <p className="text-[10px] text-rose-600 mt-1 font-semibold">{errors.fechaRecepcion}</p>
+              ) : (
+                <p className="text-[10px] text-slate-400 mt-0.5">Fecha oficial de recepción del expediente en el Departamento de Compras</p>
+              )}
             </div>
 
             {/* Documento Adjunto F56-e / F56 */}
@@ -1008,10 +979,10 @@ export const PurchaseFormModal: React.FC = () => {
               )}
             </div>
 
-            {/* 2. FECHA PUBLICACIÓN y 3. FECHA CIERRE OFERTAS */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200">
+            {/* 2. FECHAS: PUBLICACIÓN, CIERRE DE OFERTAS Y ADJUDICACIÓN (ORDEN SOLICITADO) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-200">
               
-              {/* 2. FECHA PUBLICACIÓN */}
+              {/* Fecha Publicación */}
               <div>
                 <label htmlFor="input-purchase-fecha-publicacion" className="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-blue-600" />
@@ -1022,12 +993,12 @@ export const PurchaseFormModal: React.FC = () => {
                   type="date"
                   value={fechaPublicacion}
                   onChange={(e) => setFechaPublicacion(e.target.value)}
-                  className="w-full p-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  className="w-full p-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white"
                 />
-                <p className="text-[10px] text-slate-400 mt-0.5">Publicación oficial del concurso en Guatecompras</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Publicación oficial Guatecompras</p>
               </div>
 
-              {/* 3. FECHA CIERRE OFERTAS */}
+              {/* Fecha Cierre Ofertas */}
               <div>
                 <label htmlFor="input-purchase-fecha-ofertas" className="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-amber-600" />
@@ -1038,14 +1009,37 @@ export const PurchaseFormModal: React.FC = () => {
                   type="date"
                   value={fechaOfertas}
                   onChange={(e) => setFechaOfertas(e.target.value)}
-                  className="w-full p-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  className="w-full p-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white"
                 />
-                <p className="text-[10px] text-slate-400 mt-0.5">Fecha y hora límite de recepción de plicas</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Recepción de plicas</p>
+              </div>
+
+              {/* Fecha de Adjudicación (Agregada después de Fecha Cierre Ofertas según requerimiento) */}
+              <div>
+                <label htmlFor="input-purchase-fecha-adjudicacion" className="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                  <Award className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Fecha de Adjudicación</span>
+                  {(estatusEvento === 'Adjudicación' || estatusEvento === 'Adjudicada') && <span className="text-rose-600">*</span>}
+                </label>
+                <input
+                  id="input-purchase-fecha-adjudicacion"
+                  type="date"
+                  value={fechaAdjudicacion}
+                  onChange={(e) => setFechaAdjudicacion(e.target.value)}
+                  className={`w-full p-2 text-xs border rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white ${
+                    errors.fechaAdjudicacion ? 'border-rose-400 bg-rose-50/20 text-rose-900' : 'border-slate-300'
+                  }`}
+                />
+                {errors.fechaAdjudicacion ? (
+                  <p className="text-[10px] text-rose-600 mt-1 font-semibold">{errors.fechaAdjudicacion}</p>
+                ) : (
+                  <p className="text-[10px] text-slate-400 mt-0.5">Adjudicación en Guatecompras</p>
+                )}
               </div>
 
             </div>
 
-            {/* 4. MONTO (PRESUPUESTO EN QUETZALES) - UBICADO DESPUÉS DE FECHA CIERRE OFERTAS */}
+            {/* 3. MONTO (PRESUPUESTO EN QUETZALES) */}
             <div className="pt-2 border-t border-slate-200">
               <label htmlFor="input-purchase-monto" className="block text-xs font-bold text-slate-800 mb-1">
                 Presupuesto / Monto (Q) <span className="text-rose-600">*</span>
@@ -1099,11 +1093,11 @@ export const PurchaseFormModal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Renglón Presupuestario Afectado (Integración Financiera IT) */}
+              {/* Renglón Presupuestario Afectado (Integración Financiera) */}
               <div className="mt-3 p-3 rounded-xl border border-blue-200 bg-blue-50/50 space-y-2">
                 <div className="flex items-center justify-between">
                   <label htmlFor="select-purchase-renglon" className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
-                    <span>Renglón Presupuestario Afectado (Informática) *</span>
+                    <span>Renglón Presupuestario Afectado *</span>
                   </label>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-900 border border-blue-200">
                     Afectación en Tiempo Real
@@ -1204,206 +1198,177 @@ export const PurchaseFormModal: React.FC = () => {
                 min="0"
                 value={cantidadOfertas}
                 onChange={(e) => setCantidadOfertas(parseInt(e.target.value) || 0)}
-                className="w-full p-2 text-xs font-semibold border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+                className="w-full p-2 text-xs font-semibold border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white"
               />
               <p className="text-[10px] text-slate-400 mt-0.5">Número de postores que presentaron ofertas</p>
             </div>
 
-            {/* 5. DICTAMEN TÉCNICO Y EVALUACIÓN */}
-            <div className="pt-2 border-t border-slate-200">
-              <div className="mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  Dictamen Técnico y Área Correspondiente
-                </span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {/* Evaluado por el Área Técnica Correspondiente */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
-                    Evaluado por el Área Técnica Correspondiente <span className="text-rose-600">*</span>
+            {/* 5. ESTATUS DEL EVENTO Y PROVEEDOR ADJUDICADO */}
+            <div className="pt-2 border-t border-slate-200 space-y-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-800">
+                    Estatus del Evento <span className="text-rose-600">*</span>
                   </label>
-                  <select
-                    id="select-purchase-evaluado-git"
-                    value={evaluadoGIT}
-                    onChange={(e) => {
-                      const val = e.target.value as EvaluacionGIT;
-                      setEvaluadoGIT(val);
-                      if (val === 'No') {
-                        setFechaDictamenGIT('');
-                        setFechaElaboracionOficioGIT('');
-                      }
-                    }}
-                    className="w-full p-2 text-xs font-semibold border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  >
-                    <option value="Sí">Sí - Con Dictamen Técnico</option>
-                    <option value="No">No - Sin Dictamen Técnico</option>
-                  </select>
-                </div>
-
-                {/* Fecha Dictamen Técnico */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-[#1c39bb]" />
-                      <span>Fecha Dictamen Técnico</span>
+                  {doesStatusAffectBudget(estatusEvento) ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      Afecta Disponibilidad: Sí
                     </span>
-                    {evaluadoGIT === 'Sí' && <span className="text-rose-600 font-bold">*</span>}
-                  </label>
-                  <input
-                    id="input-purchase-fecha-dictamen-git"
-                    type="date"
-                    value={fechaDictamenGIT}
-                    onChange={(e) => setFechaDictamenGIT(e.target.value)}
-                    disabled={evaluadoGIT === 'No'}
-                    className={`w-full p-2 text-xs font-semibold border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4682b4] ${
-                      evaluadoGIT === 'No' ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' :
-                      errors.fechaDictamenGIT ? 'border-rose-400 bg-rose-50/20 text-rose-900' : 'border-slate-300 bg-white text-slate-900'
-                    }`}
-                  />
-                  {errors.fechaDictamenGIT ? (
-                    <p className="text-[10px] text-rose-600 mt-1 font-semibold">{errors.fechaDictamenGIT}</p>
                   ) : (
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      {evaluadoGIT === 'Sí' ? 'Fecha de emisión del dictamen técnico' : 'No aplica'}
-                    </p>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                      <X className="w-3 h-3 text-slate-500" />
+                      Afecta Disponibilidad: No
+                    </span>
                   )}
                 </div>
 
-                {/* Elaboración Oficio GIT */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1 flex items-center justify-between">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Elaboración Oficio GIT</span>
-                    </span>
+                <select
+                  id="select-purchase-estatus-evento"
+                  value={estatusEvento}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEstatusEvento(val);
+                    if (val === 'Pagada') {
+                      setEstadoPago('pagado');
+                    }
+                  }}
+                  className="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 text-slate-800"
+                >
+                  {statusOptions.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt} {doesStatusAffectBudget(opt) ? '• (Afecta: Sí)' : '• (Afecta: No)'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Proveedor Adjudicado */}
+              {(estatusEvento === 'Adjudicación' || estatusEvento === 'Adjudicada' || proveedorAdjudicado) && (
+                <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-300 space-y-2">
+                  <label className="block text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                    <Award className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Proveedor / Empresa Adjudicada</span>
                   </label>
                   <input
-                    id="input-purchase-fecha-oficio-git"
-                    type="date"
-                    value={fechaElaboracionOficioGIT}
-                    onChange={(e) => setFechaElaboracionOficioGIT(e.target.value)}
-                    disabled={evaluadoGIT === 'No'}
-                    className={`w-full p-2 text-xs font-semibold border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4682b4] ${
-                      evaluadoGIT === 'No' ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' : 'border-slate-300 bg-white text-slate-900'
-                    }`}
+                    id="input-purchase-proveedor"
+                    type="text"
+                    value={proveedorAdjudicado}
+                    onChange={(e) => setProveedorAdjudicado(e.target.value)}
+                    placeholder="ej. Tecnologías y Sistemas Corporativos, S.A."
+                    className="w-full p-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white"
                   />
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    {evaluadoGIT === 'Sí' ? 'Fecha que el Departamento de Compras elaboró el oficio' : 'No aplica'}
-                  </p>
+                  <p className="text-[10px] text-slate-500">Nombre comercial o razón social del adjudicatario</p>
                 </div>
-              </div>
+              )}
             </div>
-
-            {/* 6. ESTATUS DEL EVENTO Y AFECTACIÓN DE DISPONIBILIDAD */}
-            <div className="pt-2 border-t border-slate-200 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-bold text-slate-800">
-                  Estatus del Evento <span className="text-rose-600">*</span>
-                </label>
-                {/* Badge institucional de afectación presupuestaria (Image 3) */}
-                {doesStatusAffectBudget(estatusEvento) ? (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                    Afecta Disponibilidad: Sí
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                    <X className="w-3 h-3 text-slate-500" />
-                    Afecta Disponibilidad: No
-                  </span>
-                )}
-              </div>
-
-              <select
-                id="select-purchase-estatus-evento"
-                value={estatusEvento}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setEstatusEvento(val);
-                  if (val === 'Pagada') {
-                    setEstadoPago('pagado');
-                  }
-                }}
-                className="w-full p-2 text-xs font-bold border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 text-slate-800"
-              >
-                {statusOptions.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt} {doesStatusAffectBudget(opt) ? '• (Afecta: Sí)' : '• (Afecta: No)'}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[10px] text-slate-400">
-                {doesStatusAffectBudget(estatusEvento) 
-                  ? 'Este evento consume o compromete saldo del renglón presupuestario seleccionado.'
-                  : 'Este evento está anulado/rechazado y no descuenta fondos de la disponibilidad del renglón.'}
-              </p>
-            </div>
-
-            {/* 7. SI EL EVENTO YA SE ADJUDICÓ: FECHA DE ADJUDICACIÓN Y PROVEEDOR */}
-            {(estatusEvento === 'Adjudicación' || estatusEvento === 'Adjudicada') && (
-              <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-300 space-y-3">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-                  <Award className="w-4 h-4 text-amber-700" />
-                  <span>Datos de Adjudicación</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Fecha de Adjudicación */}
-                  <div>
-                    <label htmlFor="input-purchase-fecha-adjudicacion" className="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-amber-700" />
-                      <span>Fecha de Adjudicación <span className="text-rose-600">*</span></span>
-                    </label>
-                    <input
-                      id="input-purchase-fecha-adjudicacion"
-                      type="date"
-                      value={fechaAdjudicacion}
-                      onChange={(e) => setFechaAdjudicacion(e.target.value)}
-                      className={`w-full p-2 text-xs border rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white ${
-                        errors.fechaAdjudicacion ? 'border-rose-400 bg-rose-50/20 text-rose-900' : 'border-slate-300'
-                      }`}
-                    />
-                    {errors.fechaAdjudicacion ? (
-                      <p className="text-[10px] text-rose-600 mt-1 font-semibold">{errors.fechaAdjudicacion}</p>
-                    ) : (
-                      <p className="text-[10px] text-slate-500 mt-0.5">Fecha en que el evento fue adjudicado</p>
-                    )}
-                  </div>
-
-                  {/* Proveedor Adjudicado */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 mb-1">
-                      Proveedor / Empresa Adjudicada
-                    </label>
-                    <input
-                      id="input-purchase-proveedor"
-                      type="text"
-                      value={proveedorAdjudicado}
-                      onChange={(e) => setProveedorAdjudicado(e.target.value)}
-                      placeholder="ej. Tecnologías y Sistemas Corporativos, S.A."
-                      className="w-full p-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white"
-                    />
-                    <p className="text-[10px] text-slate-500 mt-0.5">Nombre comercial o razón social</p>
-                  </div>
-                </div>
-              </div>
-            )}
 
           </div>
 
-          {/* Observaciones */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Observaciones y Dictámenes Técnicos de Soporte
-            </label>
-            <textarea
-              rows={2}
-              value={observaciones}
-              onChange={(e) => setObservaciones(e.target.value)}
-              placeholder="Garantías, número de oficio, justificación técnica o detalles del comité..."
-              className="w-full p-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
-            />
+          {/* SECCIÓN 4: OBSERVACIONES REGISTRADAS UNA A UNA (HOJA DE RUTA) */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
+                Observaciones del Expediente &amp; Hoja de Ruta
+              </span>
+              <span className="text-[10px] font-bold text-slate-600 bg-slate-200 px-2 py-0.5 rounded-full">
+                {observacionesList.length} {observacionesList.length === 1 ? 'observación' : 'observaciones'}
+              </span>
+            </div>
+
+            {/* Lista de Observaciones Registradas */}
+            {observacionesList.length === 0 ? (
+              <div className="p-3 bg-white rounded-lg border border-dashed border-slate-300 text-center text-xs text-slate-500">
+                No hay observaciones registradas aún. Ingrese una observación a continuación para agregarla a la hoja de ruta con autor y fecha/hora.
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {observacionesList.map((obs, idx) => (
+                  <div 
+                    key={obs.id || idx}
+                    className="p-3 bg-white rounded-lg border border-slate-200 shadow-2xs space-y-1.5 relative group hover:border-slate-300 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
+                          <UserIcon className="w-3 h-3 text-slate-600" />
+                          {obs.usuario}
+                        </span>
+                        {obs.rol && (
+                          <span className="text-[10px] text-slate-500 font-medium">
+                            ({obs.rol})
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 font-mono">
+                          <Clock className="w-2.5 h-2.5 text-slate-400" />
+                          {obs.fecha} {obs.hora ? `• ${obs.hora}` : ''}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveObservation(obs.id)}
+                        className="text-slate-400 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
+                        title="Eliminar observación"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
+                      {obs.comentario}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Formulario para agregar una nueva observación individual */}
+            <div className="pt-2 border-t border-slate-200 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <label htmlFor="input-nueva-observacion" className="font-bold text-slate-800 flex items-center gap-1">
+                  <Plus className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Agregar Observación a la Hoja de Ruta</span>
+                </label>
+                <span className="text-[10px] text-slate-500">
+                  Registrando como: <strong className="text-slate-700">{currentUser?.nombreCompleto || currentUser?.username || 'Usuario Actual'}</strong>
+                </span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <textarea
+                  id="input-nueva-observacion"
+                  rows={2}
+                  value={nuevaObservacion}
+                  onChange={(e) => setNuevaObservacion(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                      e.preventDefault();
+                      handleAddObservation();
+                    }
+                  }}
+                  placeholder="Escriba aquí la observación técnica, justificación, número de oficio o detalle del trámite..."
+                  className="flex-1 p-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddObservation}
+                  disabled={!nuevaObservacion.trim()}
+                  className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 transition-colors cursor-pointer ${
+                    nuevaObservacion.trim()
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-xs'
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  }`}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Agregar</span>
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400">
+                Cada observación se registra con su usuario y queda visible cronológicamente en la Hoja de Ruta (Árbol de Acciones).
+              </p>
+            </div>
           </div>
 
         </form>

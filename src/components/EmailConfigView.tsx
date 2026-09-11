@@ -441,7 +441,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                       type="text"
                       value={formData.senderName}
                       onChange={(e) => setFormData({ ...formData, senderName: e.target.value })}
-                      placeholder="Sistema de Control de Compras - GIT OJ"
+                      placeholder="Departamento de Compras - OJ"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
                       required
                     />

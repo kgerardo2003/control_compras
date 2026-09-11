@@ -636,13 +636,44 @@ export const DashboardView: React.FC = () => {
     const adjudicadosMonto = adjudicados.reduce((acc, p) => acc + (p.monto || 0), 0);
     const adjudicadosPorcentaje = totalEventos > 0 ? Math.round((adjudicadosCount / totalEventos) * 100) : 0;
 
-    // 2. Indicador de dictámenes técnicos por la GIT
-    const dictamenesGIT = filteredPurchases.filter(p => p.evaluadoGIT === 'Sí');
-    const dictamenesGITCount = dictamenesGIT.length;
-    const dictamenesGITMonto = dictamenesGIT.reduce((acc, p) => acc + (p.monto || 0), 0);
-    const dictamenesGITPorcentaje = totalEventos > 0 ? Math.round((dictamenesGITCount / totalEventos) * 100) : 0;
+    // Indicadores de Modalidades de Compra (Ley de Contrataciones del Estado)
+    // 1. Baja Cuantía: hasta Q25,000.00
+    const bajaCuantia = filteredPurchases.filter(p => {
+      const m = (p.modalidadCompra || '').toLowerCase();
+      return m.includes('baja') || (!p.modalidadCompra && (p.monto || 0) <= 25000);
+    });
+    const bajaCuantiaCount = bajaCuantia.length;
+    const bajaCuantiaMonto = bajaCuantia.reduce((acc, p) => acc + (p.monto || 0), 0);
+    const bajaCuantiaPorcentaje = totalEventos > 0 ? Math.round((bajaCuantiaCount / totalEventos) * 100) : 0;
 
-    // 3. Indicador de NOG en evaluación
+    // 2. Compra Directa: Q25,000.01 hasta Q90,000.00
+    const compraDirecta = filteredPurchases.filter(p => {
+      const m = (p.modalidadCompra || '').toLowerCase();
+      return m.includes('directa') || (!p.modalidadCompra && (p.monto || 0) > 25000 && (p.monto || 0) <= 90000);
+    });
+    const compraDirectaCount = compraDirecta.length;
+    const compraDirectaMonto = compraDirecta.reduce((acc, p) => acc + (p.monto || 0), 0);
+    const compraDirectaPorcentaje = totalEventos > 0 ? Math.round((compraDirectaCount / totalEventos) * 100) : 0;
+
+    // 3. Cotización: Q90,000.01 hasta Q900,000.00
+    const cotizacion = filteredPurchases.filter(p => {
+      const m = (p.modalidadCompra || '').toLowerCase();
+      return m.includes('cotiza') || (!p.modalidadCompra && (p.monto || 0) > 90000 && (p.monto || 0) <= 900000);
+    });
+    const cotizacionCount = cotizacion.length;
+    const cotizacionMonto = cotizacion.reduce((acc, p) => acc + (p.monto || 0), 0);
+    const cotizacionPorcentaje = totalEventos > 0 ? Math.round((cotizacionCount / totalEventos) * 100) : 0;
+
+    // 4. Licitación: más de Q900,000.00
+    const licitacion = filteredPurchases.filter(p => {
+      const m = (p.modalidadCompra || '').toLowerCase();
+      return m.includes('licita') || (!p.modalidadCompra && (p.monto || 0) > 900000);
+    });
+    const licitacionCount = licitacion.length;
+    const licitacionMonto = licitacion.reduce((acc, p) => acc + (p.monto || 0), 0);
+    const licitacionPorcentaje = totalEventos > 0 ? Math.round((licitacionCount / totalEventos) * 100) : 0;
+
+    // Indicador de NOG en evaluación
     const enEvaluacion = filteredPurchases.filter(p => p.estatusEvento === 'Evaluación');
     const enEvaluacionCount = enEvaluacion.length;
     const enEvaluacionMonto = enEvaluacion.reduce((acc, p) => acc + (p.monto || 0), 0);
@@ -654,9 +685,18 @@ export const DashboardView: React.FC = () => {
       adjudicadosCount,
       adjudicadosMonto,
       adjudicadosPorcentaje,
-      dictamenesGITCount,
-      dictamenesGITMonto,
-      dictamenesGITPorcentaje,
+      bajaCuantiaCount,
+      bajaCuantiaMonto,
+      bajaCuantiaPorcentaje,
+      compraDirectaCount,
+      compraDirectaMonto,
+      compraDirectaPorcentaje,
+      cotizacionCount,
+      cotizacionMonto,
+      cotizacionPorcentaje,
+      licitacionCount,
+      licitacionMonto,
+      licitacionPorcentaje,
       enEvaluacionCount,
       enEvaluacionMonto,
       enEvaluacionPorcentaje,
@@ -766,11 +806,38 @@ export const DashboardView: React.FC = () => {
     const adjudicadosMonto = adjudicados.reduce((acc, p) => acc + (p.monto || 0), 0);
     const adjudicadosPorcentaje = totalEventos > 0 ? Math.round((adjudicadosCount / totalEventos) * 100) : 0;
 
-    // 2. Dictámenes Técnicos GIT de esta unidad
-    const dictamenesGIT = deptPurchases.filter(p => p.evaluadoGIT === 'Sí');
-    const dictamenesGITCount = dictamenesGIT.length;
-    const dictamenesGITMonto = dictamenesGIT.reduce((acc, p) => acc + (p.monto || 0), 0);
-    const dictamenesGITPorcentaje = totalEventos > 0 ? Math.round((dictamenesGITCount / totalEventos) * 100) : 0;
+    // 2. Modalidades de Compra de esta unidad
+    const bajaCuantiaDept = deptPurchases.filter(p => {
+      const m = (p.modalidadCompra || '').toLowerCase();
+      return m.includes('baja') || (!p.modalidadCompra && (p.monto || 0) <= 25000);
+    });
+    const bajaCuantiaCount = bajaCuantiaDept.length;
+    const bajaCuantiaMonto = bajaCuantiaDept.reduce((acc, p) => acc + (p.monto || 0), 0);
+    const bajaCuantiaPorcentaje = totalEventos > 0 ? Math.round((bajaCuantiaCount / totalEventos) * 100) : 0;
+
+    const compraDirectaDept = deptPurchases.filter(p => {
+      const m = (p.modalidadCompra || '').toLowerCase();
+      return m.includes('directa') || (!p.modalidadCompra && (p.monto || 0) > 25000 && (p.monto || 0) <= 90000);
+    });
+    const compraDirectaCount = compraDirectaDept.length;
+    const compraDirectaMonto = compraDirectaDept.reduce((acc, p) => acc + (p.monto || 0), 0);
+    const compraDirectaPorcentaje = totalEventos > 0 ? Math.round((compraDirectaCount / totalEventos) * 100) : 0;
+
+    const cotizacionDept = deptPurchases.filter(p => {
+      const m = (p.modalidadCompra || '').toLowerCase();
+      return m.includes('cotiza') || (!p.modalidadCompra && (p.monto || 0) > 90000 && (p.monto || 0) <= 900000);
+    });
+    const cotizacionCount = cotizacionDept.length;
+    const cotizacionMonto = cotizacionDept.reduce((acc, p) => acc + (p.monto || 0), 0);
+    const cotizacionPorcentaje = totalEventos > 0 ? Math.round((cotizacionCount / totalEventos) * 100) : 0;
+
+    const licitacionDept = deptPurchases.filter(p => {
+      const m = (p.modalidadCompra || '').toLowerCase();
+      return m.includes('licita') || (!p.modalidadCompra && (p.monto || 0) > 900000);
+    });
+    const licitacionCount = licitacionDept.length;
+    const licitacionMonto = licitacionDept.reduce((acc, p) => acc + (p.monto || 0), 0);
+    const licitacionPorcentaje = totalEventos > 0 ? Math.round((licitacionCount / totalEventos) * 100) : 0;
 
     // 3. NOG en Evaluación de esta unidad
     const enEvaluacion = deptPurchases.filter(p => p.estatusEvento === 'Evaluación');
@@ -823,9 +890,18 @@ export const DashboardView: React.FC = () => {
       adjudicadosCount,
       adjudicadosMonto,
       adjudicadosPorcentaje,
-      dictamenesGITCount,
-      dictamenesGITMonto,
-      dictamenesGITPorcentaje,
+      bajaCuantiaCount,
+      bajaCuantiaMonto,
+      bajaCuantiaPorcentaje,
+      compraDirectaCount,
+      compraDirectaMonto,
+      compraDirectaPorcentaje,
+      cotizacionCount,
+      cotizacionMonto,
+      cotizacionPorcentaje,
+      licitacionCount,
+      licitacionMonto,
+      licitacionPorcentaje,
       enEvaluacionCount,
       enEvaluacionMonto,
       enEvaluacionPorcentaje,
@@ -964,228 +1040,436 @@ export const DashboardView: React.FC = () => {
         </div>
       </div>
 
-      {/* 3 Paneles e Indicadores de Avance de Gran Visibilidad y Alto Contraste Profesional */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-        {/* PANEL 1: Indicador de NOG Adjudicados */}
-        <div className="bg-white p-6 sm:p-7 rounded-2xl border-2 border-emerald-500 shadow-md hover:shadow-xl transition-all flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-3.5 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-700" />
+      {/* Paneles e Indicadores de Avance de Gran Visibilidad y Alto Contraste Profesional */}
+      <div className="space-y-6">
+        {/* Resumen de Estado Global */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* PANEL 1: Indicador de NOG Adjudicados */}
+          <div className="bg-white p-6 sm:p-7 rounded-2xl border-2 border-emerald-500 shadow-md hover:shadow-xl transition-all flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3.5 border-b border-slate-200">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-700" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black uppercase tracking-wider text-emerald-950 block">
+                      NOG Adjudicados
+                    </span>
+                    <span className="text-[11px] font-bold text-slate-500">
+                      Contrataciones Aprobadas
+                    </span>
+                  </div>
                 </div>
+                <span className="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-700 text-white shadow-xs">
+                  {metrics.adjudicadosPorcentaje}% del Total
+                </span>
+              </div>
+
+              <div className="mt-5 flex items-center justify-between gap-4">
                 <div>
-                  <span className="text-xs font-black uppercase tracking-wider text-emerald-950 block">
-                    NOG Adjudicados
-                  </span>
-                  <span className="text-[11px] font-bold text-slate-500">
-                    Contrataciones Aprobadas
-                  </span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-5xl sm:text-6xl font-black text-slate-950 tracking-tight font-mono">
+                      {metrics.adjudicadosCount}
+                    </span>
+                    <span className="text-base font-bold text-slate-500">
+                      / {metrics.totalEventos}
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold text-slate-600 mt-1.5 leading-snug">
+                    Eventos finalizados y adjudicados
+                  </p>
+                </div>
+
+                {/* Medidor Circular de Alto Contraste */}
+                <div className="relative w-22 h-22 sm:w-24 sm:h-24 flex-shrink-0">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                    <path
+                      className="stroke-slate-200 fill-none"
+                      strokeWidth="3.8"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                    <path
+                      className="stroke-emerald-600 fill-none transition-all duration-700"
+                      strokeDasharray={`${metrics.adjudicadosPorcentaje}, 100`}
+                      strokeWidth="3.8"
+                      strokeLinecap="round"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-xl sm:text-2xl font-black text-emerald-950 font-mono">
+                      {metrics.adjudicadosPorcentaje}%
+                    </span>
+                    <span className="text-[9px] font-black text-emerald-800 uppercase tracking-tighter">
+                      Tasa Éxito
+                    </span>
+                  </div>
                 </div>
               </div>
-              <span className="px-2.5 py-1 rounded-full text-xs font-black bg-emerald-700 text-white shadow-xs">
-                {metrics.adjudicadosPorcentaje}% del Total
-              </span>
             </div>
 
-            <div className="mt-5 flex items-center justify-between gap-4">
-              <div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-5xl sm:text-6xl font-black text-slate-950 tracking-tight font-mono">
-                    {metrics.adjudicadosCount}
-                  </span>
-                  <span className="text-base font-bold text-slate-500">
-                    / {metrics.totalEventos}
-                  </span>
-                </div>
-                <p className="text-xs font-bold text-slate-600 mt-1.5 leading-snug">
-                  Eventos finalizados y adjudicados
-                </p>
-              </div>
-
-              {/* Medidor Circular de Alto Contraste */}
-              <div className="relative w-22 h-22 sm:w-24 sm:h-24 flex-shrink-0">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                  <path
-                    className="stroke-slate-200 fill-none"
-                    strokeWidth="3.8"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  <path
-                    className="stroke-emerald-600 fill-none transition-all duration-700"
-                    strokeDasharray={`${metrics.adjudicadosPorcentaje}, 100`}
-                    strokeWidth="3.8"
-                    strokeLinecap="round"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-xl sm:text-2xl font-black text-emerald-950 font-mono">
-                    {metrics.adjudicadosPorcentaje}%
-                  </span>
-                  <span className="text-[9px] font-black text-emerald-800 uppercase tracking-tighter">
-                    Tasa Éxito
-                  </span>
-                </div>
-              </div>
+            <div className="mt-5 pt-3 border-t border-slate-200 bg-slate-900 text-white p-3.5 rounded-xl flex items-center justify-between shadow-xs">
+              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Monto Adjudicado</span>
+              <span className="text-sm sm:text-base font-black font-mono text-emerald-400">
+                {formatQuetzales(metrics.adjudicadosMonto)}
+              </span>
             </div>
           </div>
 
-          <div className="mt-5 pt-3 border-t border-slate-200 bg-slate-900 text-white p-3.5 rounded-xl flex items-center justify-between shadow-xs">
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Monto Adjudicado</span>
-            <span className="text-sm sm:text-base font-black font-mono text-emerald-400">
-              {formatQuetzales(metrics.adjudicadosMonto)}
-            </span>
+          {/* PANEL 2: Indicador de NOG en Evaluación */}
+          <div className="bg-white p-6 sm:p-7 rounded-2xl border-2 border-amber-500 shadow-md hover:shadow-xl transition-all flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3.5 border-b border-slate-200">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-amber-100 text-amber-800 border border-amber-300">
+                    <Clock className="w-5 h-5 text-amber-700" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-950 block">
+                      NOG en Evaluación
+                    </span>
+                    <span className="text-[11px] font-bold text-slate-500">
+                      Procesos en Trámite Activo
+                    </span>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-full text-xs font-black bg-amber-600 text-white shadow-xs">
+                  {metrics.enEvaluacionPorcentaje}% en Trámite
+                </span>
+              </div>
+
+              <div className="mt-5 flex items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-5xl sm:text-6xl font-black text-slate-950 tracking-tight font-mono">
+                      {metrics.enEvaluacionCount}
+                    </span>
+                    <span className="text-base font-bold text-slate-500">
+                      / {metrics.totalEventos}
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold text-slate-600 mt-1.5 leading-snug">
+                    Plicas y ofertas en etapa de análisis técnico
+                  </p>
+                </div>
+
+                {/* Medidor Circular de Alto Contraste */}
+                <div className="relative w-22 h-22 sm:w-24 sm:h-24 flex-shrink-0">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                    <path
+                      className="stroke-slate-200 fill-none"
+                      strokeWidth="3.8"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                    <path
+                      className="stroke-amber-600 fill-none transition-all duration-700"
+                      strokeDasharray={`${metrics.enEvaluacionPorcentaje}, 100`}
+                      strokeWidth="3.8"
+                      strokeLinecap="round"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-xl sm:text-2xl font-black text-amber-950 font-mono">
+                      {metrics.enEvaluacionPorcentaje}%
+                    </span>
+                    <span className="text-[9px] font-black text-amber-800 uppercase tracking-tighter">
+                      En Proceso
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 pt-3 border-t border-slate-200 bg-slate-900 text-white p-3.5 rounded-xl flex items-center justify-between shadow-xs">
+              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Monto en Trámite</span>
+              <span className="text-sm sm:text-base font-black font-mono text-amber-400">
+                {formatQuetzales(metrics.enEvaluacionMonto)}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* PANEL 2: Indicador de Dictámenes Técnicos por la GIT */}
-        <div className="bg-white p-6 sm:p-7 rounded-2xl border-2 border-[#1c39bb] shadow-md hover:shadow-xl transition-all flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-3.5 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-blue-100 text-[#1c39bb] border border-blue-300">
-                  <ShieldCheck className="w-5 h-5 text-[#1c39bb]" />
-                </div>
-                <div>
-                  <span className="text-xs font-black uppercase tracking-wider text-blue-950 block">
-                    Dictámenes Técnicos GIT
-                  </span>
-                  <span className="text-[11px] font-bold text-slate-500">
-                    Evaluación y Respaldo Técnico
-                  </span>
-                </div>
+        {/* INDICADORES DE MODALIDADES DE COMPRA POR SEPARADO (LCE) */}
+        <div className="bg-slate-50/80 border border-slate-200 p-5 sm:p-6 rounded-2xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-blue-900 text-white">
+                <Scale className="w-5 h-5 text-amber-400" />
               </div>
-              <span className="px-2.5 py-1 rounded-full text-xs font-black bg-[#1c39bb] text-white shadow-xs">
-                {metrics.dictamenesGITPorcentaje}% Cobertura
-              </span>
-            </div>
-
-            <div className="mt-5 flex items-center justify-between gap-4">
               <div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-5xl sm:text-6xl font-black text-slate-950 tracking-tight font-mono">
-                    {metrics.dictamenesGITCount}
-                  </span>
-                  <span className="text-base font-bold text-slate-500">
-                    / {metrics.totalEventos}
-                  </span>
-                </div>
-                <p className="text-xs font-bold text-slate-600 mt-1.5 leading-snug">
-                  Dictámenes emitidos y avalados por la GIT
+                <h3 className="text-sm font-black uppercase tracking-wider text-slate-900">
+                  Indicadores por Modalidad de Compra
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Clasificación oficial según rangos de la Ley de Contrataciones del Estado de Guatemala
                 </p>
               </div>
-
-              {/* Medidor Circular de Alto Contraste */}
-              <div className="relative w-22 h-22 sm:w-24 sm:h-24 flex-shrink-0">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                  <path
-                    className="stroke-slate-200 fill-none"
-                    strokeWidth="3.8"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  <path
-                    className="stroke-[#1c39bb] fill-none transition-all duration-700"
-                    strokeDasharray={`${metrics.dictamenesGITPorcentaje}, 100`}
-                    strokeWidth="3.8"
-                    strokeLinecap="round"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-xl sm:text-2xl font-black text-blue-950 font-mono">
-                    {metrics.dictamenesGITPorcentaje}%
-                  </span>
-                  <span className="text-[9px] font-black text-blue-800 uppercase tracking-tighter">
-                    Con Dictamen
-                  </span>
-                </div>
-              </div>
             </div>
-          </div>
-
-          <div className="mt-5 pt-3 border-t border-slate-200 bg-slate-900 text-white p-3.5 rounded-xl flex items-center justify-between shadow-xs">
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Monto Dictaminado</span>
-            <span className="text-sm sm:text-base font-black font-mono text-cyan-300">
-              {formatQuetzales(metrics.dictamenesGITMonto)}
+            <span className="text-xs font-bold text-slate-600 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs self-start sm:self-auto font-mono">
+              Total Presupuestado: <strong className="text-slate-900">{formatQuetzales(metrics.totalMonto)}</strong>
             </span>
           </div>
-        </div>
 
-        {/* PANEL 3: Indicador de NOG en Evaluación */}
-        <div className="bg-white p-6 sm:p-7 rounded-2xl border-2 border-amber-500 shadow-md hover:shadow-xl transition-all flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-3.5 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-amber-100 text-amber-800 border border-amber-300">
-                  <Clock className="w-5 h-5 text-amber-700" />
-                </div>
-                <div>
-                  <span className="text-xs font-black uppercase tracking-wider text-amber-950 block">
-                    NOG en Evaluación
-                  </span>
-                  <span className="text-[11px] font-bold text-slate-500">
-                    Procesos en Trámite Activo
-                  </span>
-                </div>
-              </div>
-              <span className="px-2.5 py-1 rounded-full text-xs font-black bg-amber-600 text-white shadow-xs">
-                {metrics.enEvaluacionPorcentaje}% en Trámite
-              </span>
-            </div>
-
-            <div className="mt-5 flex items-center justify-between gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+            {/* 1. BAJA CUANTÍA */}
+            <div className="bg-white p-5 rounded-xl border-2 border-emerald-500 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
               <div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-5xl sm:text-6xl font-black text-slate-950 tracking-tight font-mono">
-                    {metrics.enEvaluacionCount}
-                  </span>
-                  <span className="text-base font-bold text-slate-500">
-                    / {metrics.totalEventos}
+                <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                  <div>
+                    <span className="text-xs font-black uppercase tracking-wider text-emerald-950 block">
+                      Baja Cuantía
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-700">
+                      Hasta Q 25,000.00
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    Art. 43 lit. a
                   </span>
                 </div>
-                <p className="text-xs font-bold text-slate-600 mt-1.5 leading-snug">
-                  Plicas y ofertas en etapa de análisis técnico
-                </p>
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-4xl font-black text-slate-950 font-mono">
+                        {metrics.bajaCuantiaCount}
+                      </span>
+                      <span className="text-xs font-bold text-slate-400">
+                        / {metrics.totalEventos}
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-semibold text-slate-500 mt-1">
+                      Eventos de adquisición
+                    </p>
+                  </div>
+
+                  <div className="relative w-16 h-16 flex-shrink-0">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                      <path
+                        className="stroke-slate-200 fill-none"
+                        strokeWidth="3.8"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <path
+                        className="stroke-emerald-600 fill-none transition-all duration-700"
+                        strokeDasharray={`${metrics.bajaCuantiaPorcentaje}, 100`}
+                        strokeWidth="3.8"
+                        strokeLinecap="round"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-xs font-black text-emerald-950 font-mono">
+                        {metrics.bajaCuantiaPorcentaje}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Medidor Circular de Alto Contraste */}
-              <div className="relative w-22 h-22 sm:w-24 sm:h-24 flex-shrink-0">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                  <path
-                    className="stroke-slate-200 fill-none"
-                    strokeWidth="3.8"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  <path
-                    className="stroke-amber-600 fill-none transition-all duration-700"
-                    strokeDasharray={`${metrics.enEvaluacionPorcentaje}, 100`}
-                    strokeWidth="3.8"
-                    strokeLinecap="round"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-xl sm:text-2xl font-black text-amber-950 font-mono">
-                    {metrics.enEvaluacionPorcentaje}%
-                  </span>
-                  <span className="text-[9px] font-black text-amber-800 uppercase tracking-tighter">
-                    En Proceso
+              <div className="mt-4 pt-2.5 border-t border-slate-100 bg-slate-900 text-white px-3 py-2.5 rounded-lg flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Monto Total</span>
+                <span className="text-xs font-black font-mono text-emerald-400">
+                  {formatQuetzales(metrics.bajaCuantiaMonto)}
+                </span>
+              </div>
+            </div>
+
+            {/* 2. COMPRA DIRECTA */}
+            <div className="bg-white p-5 rounded-xl border-2 border-blue-600 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                  <div>
+                    <span className="text-xs font-black uppercase tracking-wider text-blue-950 block">
+                      Compra Directa
+                    </span>
+                    <span className="text-[10px] font-bold text-blue-700">
+                      Q 25,000.01 a Q 90,000.00
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800 border border-blue-300">
+                    Art. 43 lit. b
                   </span>
                 </div>
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-4xl font-black text-slate-950 font-mono">
+                        {metrics.compraDirectaCount}
+                      </span>
+                      <span className="text-xs font-bold text-slate-400">
+                        / {metrics.totalEventos}
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-semibold text-slate-500 mt-1">
+                      Eventos de adquisición
+                    </p>
+                  </div>
+
+                  <div className="relative w-16 h-16 flex-shrink-0">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                      <path
+                        className="stroke-slate-200 fill-none"
+                        strokeWidth="3.8"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <path
+                        className="stroke-blue-600 fill-none transition-all duration-700"
+                        strokeDasharray={`${metrics.compraDirectaPorcentaje}, 100`}
+                        strokeWidth="3.8"
+                        strokeLinecap="round"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-xs font-black text-blue-950 font-mono">
+                        {metrics.compraDirectaPorcentaje}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-2.5 border-t border-slate-100 bg-slate-900 text-white px-3 py-2.5 rounded-lg flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Monto Total</span>
+                <span className="text-xs font-black font-mono text-cyan-300">
+                  {formatQuetzales(metrics.compraDirectaMonto)}
+                </span>
+              </div>
+            </div>
+
+            {/* 3. COTIZACIÓN */}
+            <div className="bg-white p-5 rounded-xl border-2 border-amber-500 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                  <div>
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-950 block">
+                      Cotización
+                    </span>
+                    <span className="text-[10px] font-bold text-amber-700">
+                      Q 90,000.01 a Q 900,000.00
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
+                    Art. 38 LCE
+                  </span>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-4xl font-black text-slate-950 font-mono">
+                        {metrics.cotizacionCount}
+                      </span>
+                      <span className="text-xs font-bold text-slate-400">
+                        / {metrics.totalEventos}
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-semibold text-slate-500 mt-1">
+                      Eventos de adquisición
+                    </p>
+                  </div>
+
+                  <div className="relative w-16 h-16 flex-shrink-0">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                      <path
+                        className="stroke-slate-200 fill-none"
+                        strokeWidth="3.8"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <path
+                        className="stroke-amber-600 fill-none transition-all duration-700"
+                        strokeDasharray={`${metrics.cotizacionPorcentaje}, 100`}
+                        strokeWidth="3.8"
+                        strokeLinecap="round"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-xs font-black text-amber-950 font-mono">
+                        {metrics.cotizacionPorcentaje}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-2.5 border-t border-slate-100 bg-slate-900 text-white px-3 py-2.5 rounded-lg flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Monto Total</span>
+                <span className="text-xs font-black font-mono text-amber-400">
+                  {formatQuetzales(metrics.cotizacionMonto)}
+                </span>
+              </div>
+            </div>
+
+            {/* 4. LICITACIÓN */}
+            <div className="bg-white p-5 rounded-xl border-2 border-purple-600 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                  <div>
+                    <span className="text-xs font-black uppercase tracking-wider text-purple-950 block">
+                      Licitación
+                    </span>
+                    <span className="text-[10px] font-bold text-purple-700">
+                      Supera Q 900,000.00
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-100 text-purple-800 border border-purple-300">
+                    Art. 17 LCE
+                  </span>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-4xl font-black text-slate-950 font-mono">
+                        {metrics.licitacionCount}
+                      </span>
+                      <span className="text-xs font-bold text-slate-400">
+                        / {metrics.totalEventos}
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-semibold text-slate-500 mt-1">
+                      Eventos de adquisición
+                    </p>
+                  </div>
+
+                  <div className="relative w-16 h-16 flex-shrink-0">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                      <path
+                        className="stroke-slate-200 fill-none"
+                        strokeWidth="3.8"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <path
+                        className="stroke-purple-600 fill-none transition-all duration-700"
+                        strokeDasharray={`${metrics.licitacionPorcentaje}, 100`}
+                        strokeWidth="3.8"
+                        strokeLinecap="round"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-xs font-black text-purple-950 font-mono">
+                        {metrics.licitacionPorcentaje}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-2.5 border-t border-slate-100 bg-slate-900 text-white px-3 py-2.5 rounded-lg flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Monto Total</span>
+                <span className="text-xs font-black font-mono text-purple-300">
+                  {formatQuetzales(metrics.licitacionMonto)}
+                </span>
               </div>
             </div>
           </div>
-
-          <div className="mt-5 pt-3 border-t border-slate-200 bg-slate-900 text-white p-3.5 rounded-xl flex items-center justify-between shadow-xs">
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Monto en Trámite</span>
-            <span className="text-sm sm:text-base font-black font-mono text-amber-400">
-              {formatQuetzales(metrics.enEvaluacionMonto)}
-            </span>
-          </div>
         </div>
-
       </div>
 
       {/* ========================================================================= */}
@@ -2104,17 +2388,17 @@ export const DashboardView: React.FC = () => {
               </div>
             </div>
 
-            {/* PANEL INDIVIDUAL 2: Dictámenes Técnicos GIT en la Unidad */}
-            <div className="bg-white p-6 rounded-2xl border-2 border-[#1c39bb] shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+            {/* PANEL INDIVIDUAL 2: Modalidades de Compra LCE en la Unidad */}
+            <div className="bg-white p-6 rounded-2xl border-2 border-blue-600 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between pb-3.5 border-b border-slate-200">
                   <div className="flex items-center gap-2">
                     <div className="p-1.5 rounded-lg bg-blue-100 text-[#1c39bb] border border-blue-300">
-                      <ShieldCheck className="w-5 h-5 text-[#1c39bb]" />
+                      <Scale className="w-5 h-5 text-[#1c39bb]" />
                     </div>
                     <div>
                       <span className="text-xs font-black uppercase tracking-wider text-blue-950 block">
-                        Dictámenes GIT
+                        Modalidades LCE
                       </span>
                       <span className="text-[11px] font-bold text-slate-500">
                         {selectedDeptData.nombreCorto}
@@ -2122,57 +2406,34 @@ export const DashboardView: React.FC = () => {
                     </div>
                   </div>
                   <span className="px-2.5 py-1 rounded-full text-xs font-black bg-[#1c39bb] text-white shadow-xs">
-                    {selectedDeptData.dictamenesGITPorcentaje}% Cobertura
+                    {selectedDeptData.totalEventos} Eventos
                   </span>
                 </div>
 
-                <div className="mt-5 flex items-center justify-between gap-4">
-                  <div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-5xl font-black text-slate-950 tracking-tight font-mono">
-                        {selectedDeptData.dictamenesGITCount}
-                      </span>
-                      <span className="text-base font-bold text-slate-500">
-                        / {selectedDeptData.totalEventos}
-                      </span>
-                    </div>
-                    <p className="text-xs font-bold text-slate-600 mt-1.5 leading-snug">
-                      Dictámenes emitidos para esta área
-                    </p>
+                <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
+                    <span className="text-[10px] font-bold text-emerald-800 uppercase block">Baja Cuantía</span>
+                    <span className="text-base font-black text-emerald-950 font-mono">{selectedDeptData.bajaCuantiaCount}</span>
                   </div>
-
-                  {/* Medidor Circular de Alto Contraste */}
-                  <div className="relative w-22 h-22 flex-shrink-0">
-                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                      <path
-                        className="stroke-slate-200 fill-none"
-                        strokeWidth="3.8"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      />
-                      <path
-                        className="stroke-[#1c39bb] fill-none transition-all duration-700"
-                        strokeDasharray={`${selectedDeptData.dictamenesGITPorcentaje}, 100`}
-                        strokeWidth="3.8"
-                        strokeLinecap="round"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-xl font-black text-blue-950 font-mono">
-                        {selectedDeptData.dictamenesGITPorcentaje}%
-                      </span>
-                      <span className="text-[9px] font-black text-blue-800 uppercase tracking-tighter">
-                        Con Dictamen
-                      </span>
-                    </div>
+                  <div className="p-2.5 rounded-lg bg-blue-50 border border-blue-200">
+                    <span className="text-[10px] font-bold text-blue-800 uppercase block">Compra Directa</span>
+                    <span className="text-base font-black text-blue-950 font-mono">{selectedDeptData.compraDirectaCount}</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                    <span className="text-[10px] font-bold text-amber-800 uppercase block">Cotización</span>
+                    <span className="text-base font-black text-amber-950 font-mono">{selectedDeptData.cotizacionCount}</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-purple-50 border border-purple-200">
+                    <span className="text-[10px] font-bold text-purple-800 uppercase block">Licitación</span>
+                    <span className="text-base font-black text-purple-950 font-mono">{selectedDeptData.licitacionCount}</span>
                   </div>
                 </div>
               </div>
 
               <div className="mt-5 pt-3 border-t border-slate-200 bg-slate-900 text-white p-3.5 rounded-xl flex items-center justify-between shadow-xs">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Monto Dictaminado</span>
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Total Unidad</span>
                 <span className="text-sm font-black font-mono text-cyan-300">
-                  {formatQuetzales(selectedDeptData.dictamenesGITMonto)}
+                  {formatQuetzales(selectedDeptData.totalMonto)}
                 </span>
               </div>
             </div>

@@ -172,7 +172,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
             </button>
           )}
 
-          {/* Presupuesto IT (Finanzas & Disponibilidad) */}
+          {/* Presupuesto (Finanzas & Disponibilidad) */}
           {hasModuleAccess('presupuesto') && (
             <button
               id="nav-tab-presupuesto"
@@ -186,7 +186,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
             >
               <div className="flex items-center">
                 <DollarSign className={`w-4 h-4 mr-3 ${activeTab === 'presupuesto' ? themeConfig.sidebarIconActive : 'text-slate-400'}`} />
-                <span>Presupuesto IT</span>
+                <span>Presupuesto</span>
               </div>
               <span className={`text-[10px] px-2 py-0.5 rounded-full ${themeConfig.sidebarBadge} font-mono`}>
                 {budgetAvailability.length}
@@ -412,7 +412,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
               Creador del Sistema:
             </span>
             <span className="text-[11px] font-semibold text-white block truncate mt-0.5">
-              Lic. Kevin Gerardo López de León
+              KGLD
             </span>
           </div>
 

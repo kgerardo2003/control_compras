@@ -42,7 +42,7 @@ export const SYSTEM_MODULES: { id: ActiveTab; label: string; desc: string; icon:
   },
   { 
     id: 'presupuesto', 
-    label: 'Presupuesto IT', 
+    label: 'Presupuesto', 
     desc: 'Matriz de disponibilidad oficial (12 cols), modificaciones y catálogo de 39 renglones', 
     icon: DollarSign 
   },
@@ -266,7 +266,7 @@ export const ProfilesView: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Cree roles institucionales personalizados y asigne permisos detallados a los 10 módulos de Compras y Presupuesto IT del OJ.
+              Cree roles institucionales personalizados y asigne permisos detallados a los 10 módulos de Compras y Presupuesto del OJ.
             </p>
           </div>
         </div>

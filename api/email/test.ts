@@ -114,8 +114,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const sendMailPromise = transporter.sendMail({
       from: `"${fromDisplayName}" <${user}>`,
       to: recipient,
-      subject: `[PRUEBA EXITOSA VERCEL] Sistema de Control de Compras - GIT OJ`,
-      text: `Verificación exitosa de servicio de correo SMTP de Google para el Sistema de Control de Compras de la Gerencia de Informática del Organismo Judicial de Guatemala.\n\nRemitente: ${user}\nDestinatario: ${recipient}\nServidor: ${host}:${port}\nFecha: ${new Date().toLocaleString('es-GT', { timeZone: 'America/Guatemala' })}`,
+      subject: `[PRUEBA EXITOSA VERCEL] Sistema de Control de Compras - Departamento de Compras OJ`,
+      text: `Verificación exitosa de servicio de correo SMTP de Google para el Sistema de Control de Compras del Departamento de Compras del Organismo Judicial de Guatemala.\n\nRemitente: ${user}\nDestinatario: ${recipient}\nServidor: ${host}:${port}\nFecha: ${new Date().toLocaleString('es-GT', { timeZone: 'America/Guatemala' })}`,
       html: `
         <div style="font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
           <div style="background-color: #0f172a; padding: 26px 24px 20px; text-align: center; border-bottom: 3px solid #f59e0b;">
@@ -126,7 +126,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               ORGANISMO JUDICIAL DE GUATEMALA
             </h1>
             <p style="color: #94a3b8; margin: 6px 0 0; font-size: 12px; font-weight: 600;">
-              GERENCIA DE INFORMÁTICA
+              DEPARTAMENTO DE COMPRAS
             </p>
           </div>
           

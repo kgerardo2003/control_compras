@@ -17,7 +17,10 @@ import {
   LayoutGrid,
   GitBranch,
   FolderTree,
-  ChevronRight
+  ChevronRight,
+  User as UserIcon,
+  MessageSquare,
+  Award
 } from 'lucide-react';
 import { formatQuetzales, formatDate, formatDateTime, getModalidadCompraByMonto } from '../utils/formatters';
 import { InstitutionalReportModal } from './InstitutionalReportModal';
@@ -250,25 +253,16 @@ export const PurchaseDetailModal: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                <div className="text-right border-l border-slate-200 pl-3">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    Evaluado por el Área Técnica
-                  </span>
-                  <span className={`inline-flex items-center gap-1 mt-0.5 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                    selectedPurchase.evaluadoGIT === 'Sí' 
-                      ? 'text-emerald-700 bg-emerald-50 border border-emerald-200' 
-                      : 'text-slate-600 bg-slate-100 border border-slate-200'
-                  }`}>
-                    {selectedPurchase.evaluadoGIT === 'Sí' ? (
-                      <>
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        Evaluado por el Área Técnica (Sí)
-                      </>
-                    ) : (
-                      'Sin evaluar (No)'
-                    )}
-                  </span>
-                </div>
+                {selectedPurchase.fechaRecepcion && (
+                  <div className="text-right border-l border-slate-200 pl-3">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Fecha de Recepción
+                    </span>
+                    <span className="font-mono text-xs font-bold text-slate-900 mt-0.5 block">
+                      {formatDate(selectedPurchase.fechaRecepcion)}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -440,7 +434,49 @@ export const PurchaseDetailModal: React.FC = () => {
               </div>
             </div>
 
-            {/* Clasificación y Detalles Técnicos */}
+            {/* SECCIÓN DE FECHAS CLAVE DEL EXPEDIENTE */}
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2.5 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                Fechas Clave del Proceso
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Fecha Recepción
+                  </span>
+                  <span className="text-xs font-mono font-bold text-slate-900 block mt-0.5">
+                    {selectedPurchase.fechaRecepcion ? formatDate(selectedPurchase.fechaRecepcion) : (selectedPurchase.fechaSolicitud ? formatDate(selectedPurchase.fechaSolicitud) : '—')}
+                  </span>
+                </div>
+                <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Fecha Publicación
+                  </span>
+                  <span className="text-xs font-mono font-bold text-slate-900 block mt-0.5">
+                    {selectedPurchase.fechaPublicacion ? formatDate(selectedPurchase.fechaPublicacion) : '—'}
+                  </span>
+                </div>
+                <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Cierre de Ofertas
+                  </span>
+                  <span className="text-xs font-mono font-bold text-slate-900 block mt-0.5">
+                    {selectedPurchase.fechaOfertas ? formatDate(selectedPurchase.fechaOfertas) : '—'}
+                  </span>
+                </div>
+                <div className="p-2.5 bg-white rounded-lg border border-slate-200">
+                  <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
+                    Fecha Adjudicación
+                  </span>
+                  <span className="text-xs font-mono font-bold text-slate-900 block mt-0.5">
+                    {selectedPurchase.fechaAdjudicacion ? formatDate(selectedPurchase.fechaAdjudicacion) : '—'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Clasificación y Detalles Administrativos */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
@@ -452,45 +488,15 @@ export const PurchaseDetailModal: React.FC = () => {
               </div>
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Evaluado por el Área Técnica Correspondiente:
+                  Dependencia Solicitante:
                 </span>
-                <div className="mt-0.5">
-                  <span className={`inline-block px-2.5 py-0.5 rounded text-xs font-bold ${
-                    selectedPurchase.evaluadoGIT === 'Sí' 
-                      ? 'text-emerald-700 bg-emerald-50 border border-emerald-200' 
-                      : 'text-slate-600 bg-slate-100 border border-slate-200'
-                  }`}>
-                    {selectedPurchase.evaluadoGIT === 'Sí' ? 'Sí (Evaluado por el Área Técnica)' : 'No (No evaluado)'}
-                  </span>
-                  {selectedPurchase.evaluadoGIT === 'Sí' && selectedPurchase.fechaDictamenGIT && (
-                    <span className="block text-[11px] font-semibold text-slate-600 mt-1">
-                      Fecha de Dictamen: <strong className="text-slate-900 font-mono">{formatDate(selectedPurchase.fechaDictamenGIT)}</strong>
-                    </span>
-                  )}
-                  {selectedPurchase.evaluadoGIT === 'Sí' && selectedPurchase.fechaElaboracionOficioGIT && (
-                    <span className="block text-[11px] font-semibold text-slate-600 mt-1">
-                      Elaboración Oficio GIT: <strong className="text-slate-900 font-mono">{formatDate(selectedPurchase.fechaElaboracionOficioGIT)}</strong>
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Área Solicitante:
-                </span>
-                <span className="font-bold text-amber-700">{selectedPurchase.areaSolicitante || 'Soporte técnico'}</span>
+                <span className="font-semibold text-slate-800">{selectedPurchase.dependenciaSolicitante || 'Departamento de Compras'}</span>
               </div>
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                   Categoría Tecnológica:
                 </span>
                 <span className="font-semibold text-slate-800">{selectedPurchase.categoriaTecnologica || 'Equipo Informático'}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Dependencia Solicitante:
-                </span>
-                <span className="font-semibold text-slate-800">{selectedPurchase.dependenciaSolicitante || 'Departamento de Compras'}</span>
               </div>
               <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50/60">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
@@ -508,11 +514,11 @@ export const PurchaseDetailModal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Afectación Presupuestaria IT */}
+              {/* Afectación Presupuestaria */}
               <div className="p-2.5 rounded-lg border border-blue-200 bg-blue-50/60 sm:col-span-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-blue-900 uppercase tracking-wider">
-                    Imputación Presupuestaria (Informática)
+                    Imputación Presupuestaria
                   </span>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                     selectedPurchase.estadoPago === 'pagado'
@@ -568,13 +574,49 @@ export const PurchaseDetailModal: React.FC = () => {
               )}
             </div>
 
-            {/* Observaciones */}
-            {selectedPurchase.observaciones && (
-              <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200 text-xs">
-                <span className="font-bold text-amber-900 block mb-0.5">Observaciones Técnicas:</span>
-                <p className="text-amber-950">{selectedPurchase.observaciones}</p>
+            {/* Hoja de Ruta: Registro de Observaciones una a una */}
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <MessageSquare className="w-3.5 h-3.5 text-amber-600" />
+                  Observaciones y Hoja de Ruta
+                </h3>
+                {selectedPurchase.observacionesList && selectedPurchase.observacionesList.length > 0 && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                    {selectedPurchase.observacionesList.length} registro(s)
+                  </span>
+                )}
               </div>
-            )}
+
+              {selectedPurchase.observacionesList && selectedPurchase.observacionesList.length > 0 ? (
+                <div className="space-y-2">
+                  {selectedPurchase.observacionesList.map((obs, idx) => (
+                    <div key={obs.id || idx} className="p-3 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                      <div className="flex items-center justify-between gap-2 pb-1 mb-1 border-b border-slate-100 text-[11px]">
+                        <span className="font-bold text-slate-800 flex items-center gap-1">
+                          <UserIcon className="w-3 h-3 text-amber-600" />
+                          {obs.usuario}
+                        </span>
+                        <span className="text-slate-400 font-mono text-[10px]">
+                          {formatDateTime(obs.fecha)}
+                        </span>
+                      </div>
+                      <p className="text-slate-700 leading-relaxed text-xs whitespace-pre-wrap">
+                        {obs.comentario}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : selectedPurchase.observaciones ? (
+                <div className="p-3 bg-white rounded-lg border border-slate-200 text-slate-700 leading-relaxed">
+                  {selectedPurchase.observaciones}
+                </div>
+              ) : (
+                <p className="text-slate-400 italic text-[11px] py-1">
+                  Sin observaciones registradas en la hoja de ruta.
+                </p>
+              )}
+            </div>
 
             {/* Tarjeta Resumen del Último Estatus */}
             <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">

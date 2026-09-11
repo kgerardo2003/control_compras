@@ -123,7 +123,7 @@ const AppContent: React.FC = () => {
             {activeTab === 'presupuesto' && (
               hasModuleAccess('presupuesto') ? <BudgetView /> : (
                 <AdminAccessGate 
-                  moduleTitle="Presupuesto IT y Disponibilidad" 
+                  moduleTitle="Presupuesto y Disponibilidad" 
                   moduleDescription="Matriz de disponibilidad oficial (12 cols), modificaciones y catálogo de 39 renglones" 
                 />
               )
@@ -215,7 +215,7 @@ const AppContent: React.FC = () => {
             <span className="font-semibold text-slate-700">© 2026 Organismo Judicial de Guatemala - Departamento de Compras</span>
             <span className="text-slate-400 hidden sm:inline">•</span>
             <span className="text-slate-800">
-              Creador del Sistema: <strong className="text-blue-900 font-bold">Lic. Kevin Gerardo López de León</strong>
+              Creador del Sistema: <strong className="text-blue-900 font-bold">KGLD</strong>
             </span>
           </div>
           <div className="flex items-center space-x-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">

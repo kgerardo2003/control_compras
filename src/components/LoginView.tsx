@@ -220,7 +220,7 @@ export const LoginView: React.FC = () => {
           Organismo Judicial de Guatemala • Departamento de Compras
         </p>
         <p className="text-[12px] text-slate-300 mt-1">
-          Creador del Sistema: <strong className="text-amber-400 font-bold">Lic. Kevin Gerardo López de León</strong>
+          Creador del Sistema: <strong className="text-amber-400 font-bold">KGLD</strong>
         </p>
         <p className="text-[10px] text-slate-600 mt-0.5">
           Palacio de Justicia, Centro Cívico, Ciudad de Guatemala • Todos los derechos reservados © 2026

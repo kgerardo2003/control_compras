@@ -72,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const host = body.smtpHost || process.env.SMTP_HOST || 'smtp.gmail.com';
     const port = Number(body.smtpPort || process.env.SMTP_PORT || 465);
     const secure = body.secure !== undefined ? Boolean(body.secure) : (port === 465);
-    const fromDisplayName = senderName || body.senderName || 'Sistema de Control de Compras - GIT OJ';
+    const fromDisplayName = senderName || body.senderName || 'Departamento de Compras - OJ';
 
     if (!user || !user.includes('@')) {
       return res.status(200).json({

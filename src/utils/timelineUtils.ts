@@ -12,55 +12,19 @@ export interface TimelinePreset {
 
 export const TIMELINE_PRESETS: TimelinePreset[] = [
   {
-    id: 'dictamen_tecnico',
-    titulo: 'Llegó para Dictamen Técnico',
-    fase: 'Dictamen Técnico',
-    responsableDefault: 'Gerencia de Informática - GIT',
-    descripcionSugerida: 'Expediente y requerimiento F56-e recibido en la Gerencia de Informática para análisis y dictamen técnico de especificaciones.',
-    estadoDefault: 'completado',
-    color: 'amber'
-  },
-  {
-    id: 'remitido_compras',
-    titulo: 'GIT lo remite a Compras',
-    fase: 'Compras',
-    responsableDefault: 'Gerencia de Informática - GIT',
-    descripcionSugerida: 'Gerencia de Informática remite el expediente y oficio formal con el visto bueno técnico hacia la Dirección de Compras.',
-    estadoDefault: 'completado',
-    color: 'blue'
-  },
-  {
-    id: 'disponibilidad_presupuestaria',
-    titulo: 'Disponibilidad Presupuestaria',
-    fase: 'Presupuesto / DAF',
-    responsableDefault: 'Dirección Financiera / Presupuesto',
-    descripcionSugerida: 'Aprobación de disponibilidad presupuestaria y asignación de renglón de gasto correspondiente para la adquisición.',
-    estadoDefault: 'completado',
-    color: 'emerald'
-  },
-  {
-    id: 'solicitud_f56e',
-    titulo: 'Recepción de Solicitud F56-e',
-    fase: 'Solicitud Inicial',
-    responsableDefault: 'Área Solicitante',
-    descripcionSugerida: 'Ingreso oficial de la solicitud de requerimiento bajo formulario electrónico F56-e.',
+    id: 'recepcion_f56e',
+    titulo: 'Fecha de Recepción F56-e',
+    fase: 'Recepción',
+    responsableDefault: 'Departamento de Compras',
+    descripcionSugerida: 'Ingreso oficial y recepción del expediente bajo formulario electrónico F56-e en el Departamento de Compras.',
     estadoDefault: 'completado',
     color: 'slate'
-  },
-  {
-    id: 'vobo_autoridad',
-    titulo: 'Visto Bueno (Vo.Bo.) Institucional',
-    fase: 'Autorización',
-    responsableDefault: 'Autoridad Solicitante / Gerencia',
-    descripcionSugerida: 'Revisión y visto bueno otorgado por la jefatura competente.',
-    estadoDefault: 'completado',
-    color: 'indigo'
   },
   {
     id: 'publicacion_guatecompras',
     titulo: 'Publicación en Guatecompras',
     fase: 'Publicación Oficial',
-    responsableDefault: 'Unidad de Compras',
+    responsableDefault: 'Departamento de Compras',
     descripcionSugerida: 'Bases y especificaciones publicadas en el portal Guatecompras para concurso público.',
     estadoDefault: 'completado',
     color: 'sky'
@@ -75,22 +39,22 @@ export const TIMELINE_PRESETS: TimelinePreset[] = [
     color: 'purple'
   },
   {
-    id: 'evaluacion_ofertas',
-    titulo: 'Evaluación Técnica de Ofertas',
-    fase: 'Evaluación',
-    responsableDefault: 'Comisión Evaluadora / GIT',
-    descripcionSugerida: 'Análisis de cumplimiento técnico y cuadro comparativo de las ofertas recibidas.',
-    estadoDefault: 'en_proceso',
-    color: 'orange'
-  },
-  {
     id: 'adjudicacion_evento',
-    titulo: 'Adjudicación Definitiva',
+    titulo: 'Fecha de Adjudicación',
     fase: 'Adjudicación',
     responsableDefault: 'Autoridad Superior / Compras',
     descripcionSugerida: 'Adjudicación oficial aprobada a favor del proveedor seleccionado.',
     estadoDefault: 'completado',
     color: 'emerald'
+  },
+  {
+    id: 'evaluacion_ofertas',
+    titulo: 'Evaluación Técnica de Ofertas',
+    fase: 'Evaluación',
+    responsableDefault: 'Comisión Evaluadora',
+    descripcionSugerida: 'Análisis de cumplimiento técnico y cuadro comparativo de las ofertas recibidas.',
+    estadoDefault: 'en_proceso',
+    color: 'orange'
   }
 ];
 
@@ -98,167 +62,131 @@ export const TIMELINE_PRESETS: TimelinePreset[] = [
  * Genera o normaliza la línea de tiempo de una adquisición.
  * Si ya existen hitos en el historial, los devuelve ordenados cronológicamente por su fecha y hora exacta.
  * Si no existen, genera los hitos base calculados a partir de los datos registrados en la ficha.
+ * Además, incorpora todas las observaciones registradas una a una por los usuarios.
  */
 export function getPurchaseTimeline(purchase: PurchaseRecord): StatusTimelineEvent[] {
+  let events: StatusTimelineEvent[] = [];
+
   if (purchase.historialEstatus && purchase.historialEstatus.length > 0) {
-    return [...purchase.historialEstatus].sort((a, b) => {
-      // Priorizar fechaRegistro (ISO timestamp) si existe en ambos
-      if (a.fechaRegistro && b.fechaRegistro) {
-        return new Date(a.fechaRegistro).getTime() - new Date(b.fechaRegistro).getTime();
+    events = [...purchase.historialEstatus];
+  } else {
+    // Generar hitos base inteligentes a partir de los datos registrados
+    const baseTimeline: StatusTimelineEvent[] = [];
+
+    // 1. Fecha de Recepción (en lugar de solicitud, vobo y autorización)
+    if (purchase.fechaRecepcion || purchase.fechaSolicitud) {
+      baseTimeline.push({
+        id: `base_recepcion_${purchase.id}`,
+        titulo: 'Fecha de Recepción F56-e',
+        fase: 'Recepción',
+        fecha: purchase.fechaRecepcion || purchase.fechaSolicitud || '',
+        hora: '08:30',
+        responsable: purchase.dependenciaSolicitante || 'Departamento de Compras',
+        observaciones: `Formulario F56-e: ${purchase.f56e}. Expediente recibido en el Departamento de Compras.`,
+        documentoReferencia: `F56-e No. ${purchase.f56e}`,
+        estado: 'completado',
+        registradoPor: purchase.creadoPor || 'Departamento de Compras'
+      });
+    }
+
+    // 2. Publicación Guatecompras
+    if (purchase.fechaPublicacion) {
+      baseTimeline.push({
+        id: `base_publicacion_${purchase.id}`,
+        titulo: 'Publicación en Guatecompras',
+        fase: 'Publicación',
+        fecha: purchase.fechaPublicacion,
+        hora: '16:00',
+        responsable: 'Departamento de Compras',
+        observaciones: `Convocatoria pública publicada en Guatecompras bajo NOG: ${purchase.nog}.`,
+        documentoReferencia: `NOG: ${purchase.nog}`,
+        estado: 'completado',
+        registradoPor: 'Compras'
+      });
+    }
+
+    // 3. Cierre y Recepción de Ofertas
+    if (purchase.fechaOfertas) {
+      baseTimeline.push({
+        id: `base_ofertas_${purchase.id}`,
+        titulo: 'Recepción y Cierre de Ofertas',
+        fase: 'Recepción de Ofertas',
+        fecha: purchase.fechaOfertas,
+        hora: '10:00',
+        responsable: 'Junta de Cotización / Licitación',
+        observaciones: `Cierre del plazo para recepción de plicas. Total de ofertas recibidas: ${purchase.cantidadOfertas || 0}.`,
+        documentoReferencia: `Acta de Cierre (${purchase.cantidadOfertas || 0} Ofertas)`,
+        estado: 'completado',
+        registradoPor: 'Junta Receptora'
+      });
+    }
+
+    // 4. Fecha de Adjudicación (después de Cierre de Ofertas)
+    if (purchase.fechaAdjudicacion || purchase.estatusEvento === 'Adjudicación' || purchase.estatusEvento === 'Adjudicada') {
+      baseTimeline.push({
+        id: `base_adjudicacion_${purchase.id}`,
+        titulo: 'Fecha de Adjudicación Definitiva',
+        fase: 'Adjudicación',
+        fecha: purchase.fechaAdjudicacion || purchase.fechaOfertas || purchase.fechaPublicacion || '',
+        hora: '15:30',
+        responsable: 'Autoridad Competente / Compras',
+        observaciones: purchase.proveedorAdjudicado 
+          ? `Adjudicado formalmente a: ${purchase.proveedorAdjudicado}.`
+          : 'Evento de adquisición debidamente adjudicado.',
+        documentoReferencia: 'Resolución de Adjudicación',
+        estado: 'completado',
+        registradoPor: 'Compras'
+      });
+    } else if (purchase.estatusEvento === 'Evaluación') {
+      baseTimeline.push({
+        id: `base_evaluando_${purchase.id}`,
+        titulo: 'Evaluación y Calificación de Ofertas en Proceso',
+        fase: 'Evaluación',
+        fecha: purchase.fechaOfertas || new Date().toISOString().split('T')[0],
+        hora: '11:00',
+        responsable: 'Junta Calificadora',
+        observaciones: 'Se encuentra en análisis el cuadro comparativo de ofertas presentadas.',
+        estado: 'en_proceso',
+        registradoPor: 'Sistema'
+      });
+    }
+
+    events = baseTimeline;
+  }
+
+  // 5. Incorporar observaciones registradas una a una por los usuarios a la Hoja de Ruta
+  if (purchase.observacionesList && purchase.observacionesList.length > 0) {
+    purchase.observacionesList.forEach((obs) => {
+      const alreadyPresent = events.some(e => e.id === `obs_${obs.id}` || e.id === obs.id);
+      if (!alreadyPresent) {
+        const obsDate = new Date(obs.fecha);
+        const isValid = !isNaN(obsDate.getTime());
+        const fecha = isValid ? obsDate.toISOString().slice(0, 10) : (obs.fecha?.slice(0, 10) || new Date().toISOString().slice(0, 10));
+        const hora = isValid 
+          ? `${String(obsDate.getHours()).padStart(2, '0')}:${String(obsDate.getMinutes()).padStart(2, '0')}` 
+          : '12:00';
+
+        events.push({
+          id: `obs_${obs.id}`,
+          titulo: `Observación: ${obs.usuario}`,
+          fase: 'Observación',
+          fecha,
+          hora,
+          responsable: obs.usuario,
+          observaciones: obs.comentario,
+          estado: 'completado',
+          registradoPor: obs.usuario,
+          fechaRegistro: obs.fecha,
+          automatico: false,
+        });
       }
-      const timeStrA = a.hora ? (a.hora.length === 5 ? `${a.hora}:00` : a.hora) : '00:00:00';
-      const timeStrB = b.hora ? (b.hora.length === 5 ? `${b.hora}:00` : b.hora) : '00:00:00';
-      const dateA = new Date(`${a.fecha}T${timeStrA}`).getTime();
-      const dateB = new Date(`${b.fecha}T${timeStrB}`).getTime();
-      return dateA - dateB;
     });
   }
 
-  // Generar hitos base inteligentes a partir de los datos registrados
-  const baseTimeline: StatusTimelineEvent[] = [];
-
-  // 1. Solicitud
-  if (purchase.fechaSolicitud) {
-    baseTimeline.push({
-      id: `base_solicitud_${purchase.id}`,
-      titulo: 'Recepción de Solicitud F56-e',
-      fase: 'Solicitud Inicial',
-      fecha: purchase.fechaSolicitud,
-      hora: '08:30',
-      responsable: purchase.dependenciaSolicitante || purchase.areaSolicitante || 'Área Solicitante',
-      observaciones: `Formulario F56-e: ${purchase.f56e}. Requerimiento inicial registrado en el sistema.`,
-      documentoReferencia: `F56-e No. ${purchase.f56e}`,
-      estado: 'completado',
-      registradoPor: purchase.creadoPor || 'Sistema GIT'
-    });
-  }
-
-  // 2. Llegada para Dictamen Técnico
-  if (purchase.evaluadoGIT === 'Sí' || purchase.fechaDictamenGIT) {
-    baseTimeline.push({
-      id: `base_dictamen_${purchase.id}`,
-      titulo: 'Llegó para Dictamen Técnico',
-      fase: 'Dictamen Técnico',
-      fecha: purchase.fechaDictamenGIT || purchase.fechaSolicitud,
-      hora: '09:15',
-      responsable: 'Gerencia de Informática - GIT',
-      observaciones: 'Ingreso del expediente para evaluación técnica de viabilidad, arquitectura y especificaciones por la GIT.',
-      documentoReferencia: purchase.fechaDictamenGIT ? `Dictamen GIT (${purchase.fechaDictamenGIT})` : 'Expediente F56-e',
-      estado: 'completado',
-      registradoPor: 'Gerencia de Informática'
-    });
-  }
-
-  // 3. Remitido por GIT a Compras
-  if (purchase.fechaElaboracionOficioGIT) {
-    baseTimeline.push({
-      id: `base_oficio_${purchase.id}`,
-      titulo: 'GIT lo remite a Compras',
-      fase: 'Compras',
-      fecha: purchase.fechaElaboracionOficioGIT,
-      hora: '11:00',
-      responsable: 'Gerencia de Informática - GIT',
-      observaciones: 'Elaboración y emisión de oficio técnico de la Gerencia de Informática remitido a la Dirección de Compras.',
-      documentoReferencia: `Oficio GIT Fecha: ${purchase.fechaElaboracionOficioGIT}`,
-      estado: 'completado',
-      registradoPor: 'Gerencia de Informática'
-    });
-  }
-
-  // 4. Vo.Bo. Institucional
-  if (purchase.fechaVoBo) {
-    baseTimeline.push({
-      id: `base_vobo_${purchase.id}`,
-      titulo: 'Visto Bueno (Vo.Bo.) Institucional',
-      fase: 'Autorización',
-      fecha: purchase.fechaVoBo,
-      hora: '14:00',
-      responsable: 'Jefatura de Área / Dirección',
-      observaciones: 'Aprobación del requerimiento con visto bueno de la jefatura solicitante.',
-      estado: 'completado',
-      registradoPor: 'Administración'
-    });
-  }
-
-  // 5. Disponibilidad Presupuestaria y Autorización
-  if (purchase.fechaAutorizado) {
-    baseTimeline.push({
-      id: `base_autorizado_${purchase.id}`,
-      titulo: 'Disponibilidad Presupuestaria y Autorización',
-      fase: 'Presupuesto / DAF',
-      fecha: purchase.fechaAutorizado,
-      hora: '10:30',
-      responsable: 'Dirección Financiera / Presupuesto',
-      observaciones: `Verificación de disponibilidad presupuestaria por un monto total de GTQ ${purchase.monto?.toLocaleString('es-GT', { minimumFractionDigits: 2 })}.`,
-      documentoReferencia: 'Aprobación Presupuestaria',
-      estado: 'completado',
-      registradoPor: 'DAF'
-    });
-  }
-
-  // 6. Publicación Guatecompras
-  if (purchase.fechaPublicacion) {
-    baseTimeline.push({
-      id: `base_publicacion_${purchase.id}`,
-      titulo: 'Publicación en Guatecompras',
-      fase: 'Publicación',
-      fecha: purchase.fechaPublicacion,
-      hora: '16:00',
-      responsable: 'Unidad de Compras y Contrataciones',
-      observaciones: `Convocatoria pública publicada en Guatecompras bajo NOG: ${purchase.nog}.`,
-      documentoReferencia: `NOG: ${purchase.nog}`,
-      estado: 'completado',
-      registradoPor: 'Compras'
-    });
-  }
-
-  // 7. Cierre y Recepción de Ofertas
-  if (purchase.fechaOfertas) {
-    baseTimeline.push({
-      id: `base_ofertas_${purchase.id}`,
-      titulo: 'Recepción y Cierre de Ofertas',
-      fase: 'Recepción de Ofertas',
-      fecha: purchase.fechaOfertas,
-      hora: '10:00',
-      responsable: 'Junta de Cotización / Licitación',
-      observaciones: `Cierre del plazo para recepción de plicas. Total de ofertas recibidas: ${purchase.cantidadOfertas || 0}.`,
-      documentoReferencia: `Acta de Cierre (${purchase.cantidadOfertas || 0} Ofertas)`,
-      estado: 'completado',
-      registradoPor: 'Junta Receptora'
-    });
-  }
-
-  // 8. Adjudicación
-  if (purchase.estatusEvento === 'Adjudicación' || purchase.fechaAdjudicacion) {
-    baseTimeline.push({
-      id: `base_adjudicacion_${purchase.id}`,
-      titulo: 'Adjudicación Definitiva',
-      fase: 'Adjudicación',
-      fecha: purchase.fechaAdjudicacion || purchase.fechaOfertas || purchase.fechaPublicacion,
-      hora: '15:30',
-      responsable: 'Autoridad Competente',
-      observaciones: purchase.proveedorAdjudicado 
-        ? `Adjudicado formalmente a: ${purchase.proveedorAdjudicado}.`
-        : 'Evento de adquisición debidamente adjudicado.',
-      documentoReferencia: 'Resolución de Adjudicación',
-      estado: 'completado',
-      registradoPor: 'Compras'
-    });
-  } else if (purchase.estatusEvento === 'Evaluación') {
-    baseTimeline.push({
-      id: `base_evaluando_${purchase.id}`,
-      titulo: 'Evaluación y Calificación de Ofertas en Proceso',
-      fase: 'Evaluación',
-      fecha: purchase.fechaOfertas || new Date().toISOString().split('T')[0],
-      hora: '11:00',
-      responsable: 'Junta Calificadora / Área Técnica',
-      observaciones: 'Se encuentra en análisis el cuadro comparativo de ofertas presentadas.',
-      estado: 'en_proceso',
-      registradoPor: 'Sistema'
-    });
-  }
-
-  return baseTimeline.sort((a, b) => {
+  return events.sort((a, b) => {
+    if (a.fechaRegistro && b.fechaRegistro) {
+      return new Date(a.fechaRegistro).getTime() - new Date(b.fechaRegistro).getTime();
+    }
     const timeStrA = a.hora ? (a.hora.length === 5 ? `${a.hora}:00` : a.hora) : '00:00:00';
     const timeStrB = b.hora ? (b.hora.length === 5 ? `${b.hora}:00` : b.hora) : '00:00:00';
     const dateA = new Date(`${a.fecha}T${timeStrA}`).getTime();
@@ -339,35 +267,26 @@ export function detectAutomaticEventsOnUpdate(
     }));
   }
 
-  // 2. Llegada o Registro de Dictamen Técnico en GIT
-  if (update.evaluadoGIT === 'Sí' && prev.evaluadoGIT !== 'Sí') {
+  // 2. Fecha de Recepción
+  if (update.fechaRecepcion && update.fechaRecepcion !== prev.fechaRecepcion) {
     events.push(createAutomaticTimelineEvent({
-      titulo: 'Llegó para Dictamen Técnico en GIT',
-      fase: 'Dictamen Técnico',
-      responsable: 'Gerencia de Informática - GIT',
-      observaciones: 'Expediente F56-e recibido en la Gerencia de Informática para análisis y dictamen técnico de especificaciones.',
-      documentoReferencia: update.fechaDictamenGIT ? `Dictamen: ${update.fechaDictamenGIT}` : undefined,
-      registradoPor: userName
-    }));
-  } else if (update.fechaDictamenGIT && update.fechaDictamenGIT !== prev.fechaDictamenGIT) {
-    events.push(createAutomaticTimelineEvent({
-      titulo: 'Dictamen Técnico Emitido por GIT',
-      fase: 'Dictamen Técnico',
-      responsable: 'Gerencia de Informática - GIT',
-      observaciones: 'Emisión de dictamen técnico con visto bueno favorable de especificaciones para trámite de compra.',
-      documentoReferencia: `Fecha Dictamen: ${update.fechaDictamenGIT}`,
+      titulo: 'Fecha de Recepción F56-e Registrada',
+      fase: 'Recepción',
+      responsable: 'Departamento de Compras',
+      observaciones: `Expediente recibido formalmente en el Departamento de Compras con fecha ${update.fechaRecepcion}.`,
+      documentoReferencia: `F56-e: ${update.f56e || prev.f56e}`,
       registradoPor: userName
     }));
   }
 
-  // 3. Remitido por GIT a Dirección de Compras
-  if (update.fechaElaboracionOficioGIT && update.fechaElaboracionOficioGIT !== prev.fechaElaboracionOficioGIT) {
+  // 3. Fecha de Adjudicación
+  if (update.fechaAdjudicacion && update.fechaAdjudicacion !== prev.fechaAdjudicacion) {
     events.push(createAutomaticTimelineEvent({
-      titulo: 'GIT lo remite a Dirección de Compras',
-      fase: 'Compras',
-      responsable: 'Gerencia de Informática - GIT',
-      observaciones: 'Oficio técnico y expediente remitido formalmente desde la GIT hacia la Dirección de Compras.',
-      documentoReferencia: `Oficio GIT: ${update.fechaElaboracionOficioGIT}`,
+      titulo: 'Fecha de Adjudicación Registrada',
+      fase: 'Adjudicación',
+      responsable: 'Autoridad Superior / Compras',
+      observaciones: `Adjudicación registrada para la fecha ${update.fechaAdjudicacion}.${update.proveedorAdjudicado ? ` Proveedor: ${update.proveedorAdjudicado}` : ''}`,
+      documentoReferencia: `Fecha Adjudicación: ${update.fechaAdjudicacion}`,
       registradoPor: userName
     }));
   }

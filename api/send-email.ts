@@ -93,9 +93,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const sendMailPromise = transporter.sendMail({
-      from: `"Sistema de Compras GIT - OJ" <${user}>`,
+      from: `"Departamento de Compras - OJ" <${user}>`,
       to: recipientsList.length > 0 ? recipientsList.join(', ') : user,
-      subject: subject || asunto || '[GIT-OJ] Notificación de Compra',
+      subject: subject || asunto || '[OJ] Notificación de Compra',
       text: text || 'Notificación oficial de compras.',
       html: finalHtml,
       attachments

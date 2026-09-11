@@ -237,7 +237,7 @@ const STORAGE_KEYS = {
 
 export const DEFAULT_GMAIL_CONFIG: GmailConfig = {
   userEmail: 'kgerardo2003@gmail.com',
-  senderName: 'Sistema de Control de Compras - GIT OJ',
+  senderName: 'Departamento de Compras - OJ',
   appPassword: 'pwwv bgmb wgak bvdn',
   smtpHost: 'smtp.gmail.com',
   smtpPort: 465,
@@ -259,7 +259,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const parsed: User[] = JSON.parse(saved);
         const adminIndex = parsed.findIndex(u => u.username.toLowerCase() === 'admin');
         if (adminIndex >= 0) {
-          parsed[adminIndex].nombreCompleto = 'Lic. Kevin Gerardo López de León';
+          parsed[adminIndex].nombreCompleto = 'KGLD';
           parsed[adminIndex].email = 'klopez@oj.gob.gt';
           parsed[adminIndex].password = parsed[adminIndex].password || 'Guate2026*';
           parsed[adminIndex].rol = 'administrador';
@@ -405,7 +405,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           const parsed = JSON.parse(saved);
           if (parsed && parsed.username && parsed.username.toLowerCase() === 'admin') {
-            parsed.nombreCompleto = 'Lic. Kevin Gerardo López de León';
+            parsed.nombreCompleto = 'KGLD';
             parsed.email = 'klopez@oj.gob.gt';
             parsed.password = parsed.password || 'Guate2026*';
             parsed.cargo = 'Jefe del Departamento de Compras';
@@ -1060,7 +1060,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           smtpHost: gmailConfig.smtpHost || 'smtp.gmail.com',
           smtpPort: gmailConfig.smtpPort || 465,
           secure: gmailConfig.secure !== undefined ? gmailConfig.secure : true,
-          senderName: gmailConfig.senderName || 'Sistema de Control de Compras - GIT OJ',
+          senderName: gmailConfig.senderName || 'Departamento de Compras - OJ',
           to: recipients,
           subject: params.subject,
           html: params.html,
@@ -1079,7 +1079,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             smtpHost: gmailConfig.smtpHost || 'smtp.gmail.com',
             smtpPort: gmailConfig.smtpPort || 465,
             secure: gmailConfig.secure !== undefined ? gmailConfig.secure : true,
-            senderName: gmailConfig.senderName || 'Sistema de Control de Compras - GIT OJ',
+            senderName: gmailConfig.senderName || 'Departamento de Compras - OJ',
             to: recipients,
             subject: params.subject,
             html: params.html,
@@ -1274,7 +1274,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const updatedUser = { 
       ...user, 
-      nombreCompleto: user.username.toLowerCase() === 'admin' ? 'Lic. Kevin Gerardo López de León' : user.nombreCompleto,
+      nombreCompleto: user.username.toLowerCase() === 'admin' ? 'KGLD' : user.nombreCompleto,
       email: user.username.toLowerCase() === 'admin' ? 'klopez@oj.gob.gt' : user.email,
       password: expectedPassword,
       ultimoAcceso: new Date().toISOString() 
