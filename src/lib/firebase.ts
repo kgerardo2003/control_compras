@@ -13,6 +13,7 @@ import {
   writeBatch,
   getDocs,
   query,
+  where,
   orderBy,
   limit
 } from 'firebase/firestore';
@@ -406,12 +407,24 @@ export async function removeCatalogFromFirestore(catalogId: string): Promise<{ s
 export async function removeUserFromFirestore(userId: string): Promise<{ success: boolean; error?: string }> {
   try {
     const docRef = doc(db, USERS_COLLECTION, userId);
-    const deletePromise = deleteDoc(docRef);
-    // Timeout de 3.5 segundos para evitar que la interfaz se quede en un loop si Firestore no responde
     await Promise.race([
-      deletePromise,
-      new Promise<void>((resolve) => setTimeout(resolve, 3500))
+      deleteDoc(docRef),
+      new Promise<void>((resolve) => setTimeout(resolve, 4000))
     ]);
+
+    // Búsqueda de respaldo por si el documento fue registrado con un ID alterno
+    try {
+      const q = query(collection(db, USERS_COLLECTION), where('id', '==', userId));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const batch = writeBatch(db);
+        snap.forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+      }
+    } catch {
+      // No crítico si falla la consulta complementaria
+    }
+
     console.log("Usuario eliminado exitosamente en Firestore:", userId);
     return { success: true };
   } catch (err: any) {

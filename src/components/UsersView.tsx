@@ -631,6 +631,7 @@ export const UsersView: React.FC = () => {
             <div className="flex items-center justify-end gap-2.5">
               <button
                 type="button"
+                id="btn-cancel-delete-user"
                 disabled={isDeleting}
                 onClick={() => setUserToDelete(null)}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors cursor-pointer disabled:opacity-50"
@@ -639,17 +640,35 @@ export const UsersView: React.FC = () => {
               </button>
               <button
                 type="button"
+                id="btn-confirm-delete-user"
                 disabled={isDeleting}
                 onClick={async () => {
-                  if (!userToDelete) return;
-                  const targetId = userToDelete.id;
-                  setUserToDelete(null);
-                  await deleteUser(targetId);
+                  if (!userToDelete || isDeleting) return;
+                  const targetUser = userToDelete;
+                  setIsDeleting(true);
+                  try {
+                    await deleteUser(targetUser.id);
+                    setUserToDelete(null);
+                  } catch (err) {
+                    console.error("Error al eliminar usuario:", err);
+                    setUserToDelete(null);
+                  } finally {
+                    setIsDeleting(false);
+                  }
                 }}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-xs transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-xs transition-colors shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Confirmar Eliminación</span>
+                {isDeleting ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Confirmar Eliminación</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

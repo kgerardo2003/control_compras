@@ -635,16 +635,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn("No se pudo iniciar listener de catálogos:", err);
     }
 
-    // Suscripción reactiva a Directorio de Usuarios (con protección contra resurrección de eliminados)
+    // Suscripción reactiva a Directorio de Usuarios (con protección reforzada contra bucles y resurrección de eliminados)
     let unsubUsers: (() => void) | undefined;
     try {
       unsubUsers = onSnapshot(collection(db, USERS_COLLECTION), { includeMetadataChanges: false }, (snapshot) => {
         if (!snapshot.empty) {
+          let sessionDeleted: string[] = [];
+          try {
+            sessionDeleted = JSON.parse(sessionStorage.getItem('oj_deleted_user_ids') || '[]');
+          } catch {}
+
           const remoteUsers: User[] = [];
-          snapshot.forEach((doc) => {
-            const u = doc.data() as User;
-            // Descartar registros que hayan sido eliminados en la sesión actual
-            if (!recentlyDeletedUserIdsRef.current.has(u.id)) {
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data() as any;
+            const effectiveId = data.id || docSnap.id;
+            const u: User = {
+              ...data,
+              id: effectiveId,
+            };
+            // Descartar registros que hayan sido eliminados en la sesión o recientemente
+            const isDeleted = 
+              recentlyDeletedUserIdsRef.current.has(effectiveId) ||
+              recentlyDeletedUserIdsRef.current.has(docSnap.id) ||
+              (data.id && recentlyDeletedUserIdsRef.current.has(data.id)) ||
+              (data.username && recentlyDeletedUserIdsRef.current.has(data.username)) ||
+              sessionDeleted.includes(effectiveId) ||
+              sessionDeleted.includes(docSnap.id) ||
+              (data.username && sessionDeleted.includes(data.username));
+
+            if (!isDeleted) {
               remoteUsers.push(u);
             }
           });
@@ -1032,7 +1051,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     try {
-      const res = await fetch('/api/email/send', {
+      let res = await fetch('/api/email/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1048,6 +1067,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           text: params.text,
         }),
       });
+
+      // Si /api/email/send retorna 404, intentar con endpoint alterno /api/send-email
+      if (!res.ok && res.status === 404) {
+        res = await fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userEmail,
+            appPassword,
+            smtpHost: gmailConfig.smtpHost || 'smtp.gmail.com',
+            smtpPort: gmailConfig.smtpPort || 465,
+            secure: gmailConfig.secure !== undefined ? gmailConfig.secure : true,
+            senderName: gmailConfig.senderName || 'Sistema de Control de Compras - GIT OJ',
+            to: recipients,
+            subject: params.subject,
+            html: params.html,
+            text: params.text,
+          }),
+        });
+      }
+
       const rawText = await res.text();
       let data: any = null;
       try {
@@ -1057,7 +1097,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return { 
         success: res.ok && Boolean(data?.success), 
-        message: data?.message || (res.ok ? 'Notificación enviada' : `Error en servidor (${res.status})`) 
+        message: data?.message || (res.ok ? 'Notificación enviada' : `Error en servidor (${res.status}): ${rawText.slice(0, 150)}`) 
       };
     } catch (err: any) {
       return { success: false, message: err?.message || 'Error de conexión' };
@@ -2074,10 +2114,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Registrar en el conjunto de eliminados recientes para blindar la UI contra bucles de sincronización
     recentlyDeletedUserIdsRef.current.add(id);
+    if (user.username) {
+      recentlyDeletedUserIdsRef.current.add(user.username);
+    }
+    try {
+      const stored = JSON.parse(sessionStorage.getItem('oj_deleted_user_ids') || '[]');
+      if (!stored.includes(id)) stored.push(id);
+      if (user.username && !stored.includes(user.username)) stored.push(user.username);
+      sessionStorage.setItem('oj_deleted_user_ids', JSON.stringify(stored));
+    } catch {}
 
     // Actualización inmediata local para UI ultra fluida y refresco instantáneo de la pantalla
     setUsers(prev => {
-      const next = prev.filter(u => u.id !== id);
+      const next = prev.filter(u => u.id !== id && u.username !== user.username);
       try {
         localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(next));
       } catch {}
@@ -2090,18 +2139,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast({
       type: 'info',
       title: 'Usuario Eliminado',
-      message: `El usuario ${user.username} (${user.nombreCompleto}) ha sido retirado del sistema exitosamente.`,
+      message: `El usuario @${user.username} (${user.nombreCompleto}) ha sido retirado del sistema exitosamente.`,
       duration: 4000
     });
 
-    // Despacho no bloqueante a Firestore para evitar que la UI se congele o entre en bucles de espera
-    removeUserFromFirestore(id).then(res => {
+    // Despacho a Firestore y confirmación limpia
+    try {
+      const res = await removeUserFromFirestore(id);
       if (!res.success) {
         console.warn("Aviso de eliminación en Firestore:", res.error);
       }
-    }).catch(err => {
+    } catch (err) {
       console.warn("Error en eliminación remota de usuario:", err);
-    });
+    }
   };
 
   // Perfiles de Usuario CRUD y Control de Acceso

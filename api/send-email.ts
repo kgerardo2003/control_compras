@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import nodemailer from 'nodemailer';
-import { OJ_LOGO_CID, OJ_LOGO_PNG_BASE64 } from './emailLogoAsset';
+import { OJ_LOGO_CID, OJ_LOGO_PNG_BASE64 } from './_logo';
 
 function normalizeEmail(email?: string): string {
   if (!email) return '';
