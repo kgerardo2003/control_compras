@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import nodemailer from 'nodemailer';
-import { OJ_LOGO_CID, OJ_LOGO_PNG_BASE64 } from '../src/utils/emailLogoAsset';
+import { OJ_LOGO_CID, OJ_LOGO_PNG_BASE64 } from './emailLogoAsset';
 
 function normalizeEmail(email?: string): string {
   if (!email) return '';
@@ -60,19 +60,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const port = Number(body.smtpPort || process.env.SMTP_PORT || 465);
     const secure = body.secure !== undefined ? Boolean(body.secure) : (port === 465);
 
-    const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: { user, pass },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
-    });
+    const transportConfig: any = (host === 'smtp.gmail.com' || user.endsWith('@gmail.com'))
+      ? {
+          service: 'gmail',
+          auth: { user, pass },
+          connectionTimeout: 6000,
+          greetingTimeout: 6000,
+          socketTimeout: 7500,
+        }
+      : {
+          host,
+          port,
+          secure,
+          auth: { user, pass },
+          connectionTimeout: 6000,
+          greetingTimeout: 6000,
+          socketTimeout: 7500,
+        };
+
+    const transporter = nodemailer.createTransport(transportConfig);
 
     const finalHtml = html || htmlContenido || `<p>${text || 'Notificación oficial de compras.'}</p>`;
     const attachments = [];
-    if (finalHtml.includes(`cid:${OJ_LOGO_CID}`) || finalHtml.includes('organismo_judicial_logo') || finalHtml.includes('ORGANISMO JUDICIAL')) {
+    if (OJ_LOGO_PNG_BASE64 && (finalHtml.includes(`cid:${OJ_LOGO_CID}`) || finalHtml.includes('organismo_judicial_logo') || finalHtml.includes('ORGANISMO JUDICIAL'))) {
       attachments.push({
         filename: 'organismo_judicial_logo.png',
         content: Buffer.from(OJ_LOGO_PNG_BASE64, 'base64'),
@@ -82,7 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    const info = await transporter.sendMail({
+    const sendMailPromise = transporter.sendMail({
       from: `"Sistema de Compras GIT - OJ" <${user}>`,
       to: recipientsList.length > 0 ? recipientsList.join(', ') : user,
       subject: subject || asunto || '[GIT-OJ] Notificación de Compra',
@@ -91,9 +101,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       attachments
     });
 
+    const info = await Promise.race([
+      sendMailPromise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Tiempo de espera agotado al conectar con el servidor SMTP de Gmail (8s).')), 8000)
+      )
+    ]);
+
     return res.status(200).json({ success: true, messageId: info.messageId, user });
   } catch (error: any) {
     console.error('Error en send-email:', error);
-    return res.status(400).json({ success: false, message: error?.message || 'Error enviando correo' });
+    let userMsg = error?.message || 'Error enviando correo';
+    if (error?.code === 'EAUTH' || userMsg.includes('535') || userMsg.includes('BadCredentials') || userMsg.includes('Username and Password not accepted')) {
+      userMsg = 'Fallo de autenticación con Gmail (535): Verifique la Contraseña de Aplicación de 16 caracteres de Google.';
+    }
+    return res.status(200).json({ success: false, message: userMsg, code: error?.code });
   }
 }

@@ -51,15 +51,23 @@ function createGmailTransporter(config: {
   }
 
   return {
-    transporter: nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: { user, pass },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
-    }),
+    transporter: nodemailer.createTransport((host === 'smtp.gmail.com' || user.endsWith('@gmail.com'))
+      ? {
+          service: 'gmail',
+          auth: { user, pass },
+          connectionTimeout: 8000,
+          greetingTimeout: 8000,
+          socketTimeout: 10000,
+        }
+      : {
+          host,
+          port,
+          secure,
+          auth: { user, pass },
+          connectionTimeout: 8000,
+          greetingTimeout: 8000,
+          socketTimeout: 10000,
+        }),
     user,
     host,
     port

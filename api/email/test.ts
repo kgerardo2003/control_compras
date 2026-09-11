@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import nodemailer from 'nodemailer';
-import { OJ_LOGO_CID, OJ_LOGO_PNG_BASE64 } from '../../src/utils/emailLogoAsset';
+import { OJ_LOGO_CID, OJ_LOGO_PNG_BASE64 } from '../emailLogoAsset';
 
 function normalizeEmail(email?: string): string {
   if (!email) return '';
@@ -60,37 +60,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const fromDisplayName = body.senderName || 'Sistema de Control de Compras - GIT OJ';
 
     if (!user || !user.includes('@')) {
-      return res.status(400).json({
+      return res.status(200).json({
         success: false,
         message: 'La dirección de correo de Gmail no es válida. Debe incluir @gmail.com.'
       });
     }
 
     if (!pass || pass.length < 8) {
-      return res.status(400).json({
+      return res.status(200).json({
         success: false,
         message: 'La Contraseña de Aplicación de Google es requerida (16 caracteres).'
       });
     }
 
     if (!recipient || !recipient.includes('@')) {
-      return res.status(400).json({
+      return res.status(200).json({
         success: false,
         message: 'Debe proporcionar una dirección de correo de destino válida.'
       });
     }
 
-    const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: { user, pass },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
-    });
+    const transportConfig: any = (host === 'smtp.gmail.com' || user.endsWith('@gmail.com'))
+      ? {
+          service: 'gmail',
+          auth: { user, pass },
+          connectionTimeout: 6000,
+          greetingTimeout: 6000,
+          socketTimeout: 7500,
+        }
+      : {
+          host,
+          port,
+          secure,
+          auth: { user, pass },
+          connectionTimeout: 6000,
+          greetingTimeout: 6000,
+          socketTimeout: 7500,
+        };
 
-    const info = await transporter.sendMail({
+    const transporter = nodemailer.createTransport(transportConfig);
+
+    const attachments = [];
+    if (OJ_LOGO_PNG_BASE64) {
+      attachments.push({
+        filename: 'organismo_judicial_logo.png',
+        content: Buffer.from(OJ_LOGO_PNG_BASE64, 'base64'),
+        cid: OJ_LOGO_CID,
+        contentType: 'image/png',
+        contentDisposition: 'inline'
+      });
+    }
+
+    const sendMailPromise = transporter.sendMail({
       from: `"${fromDisplayName}" <${user}>`,
       to: recipient,
       subject: `[PRUEBA EXITOSA VERCEL] Sistema de Control de Compras - GIT OJ`,
@@ -151,16 +172,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           </div>
         </div>
       `,
-      attachments: [
-        {
-          filename: 'organismo_judicial_logo.png',
-          content: Buffer.from(OJ_LOGO_PNG_BASE64, 'base64'),
-          cid: OJ_LOGO_CID,
-          contentType: 'image/png',
-          contentDisposition: 'inline'
-        }
-      ]
+      attachments
     });
+
+    const info = await Promise.race([
+      sendMailPromise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Tiempo de espera agotado al conectar con el servidor SMTP de Gmail (8s).')), 8000)
+      )
+    ]);
 
     return res.status(200).json({
       success: true,
@@ -171,10 +191,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error: any) {
     console.error('Error enviando correo de prueba en Vercel:', error);
     let userMsg = error?.message || 'Error al despachar el correo de prueba desde Vercel.';
-    if (error?.code === 'EAUTH') {
-      userMsg = 'Fallo de autenticación con Gmail: La Contraseña de Aplicación de 16 caracteres o la cuenta de Google son inválidas.';
+    if (error?.code === 'EAUTH' || userMsg.includes('535') || userMsg.includes('BadCredentials') || userMsg.includes('Username and Password not accepted')) {
+      userMsg = 'Fallo de autenticación con Gmail (535): La Contraseña de Aplicación de 16 caracteres de Google o la cuenta de correo son inválidas. Verifique en myaccount.google.com -> Seguridad.';
+    } else if (userMsg.includes('ETIMEDOUT') || userMsg.includes('ESOCKETTIMEDOUT') || userMsg.includes('Tiempo de espera agotado')) {
+      userMsg = 'Tiempo de espera agotado al conectar con Gmail. Verifique su conexión y configuración SMTP.';
     }
-    return res.status(400).json({
+
+    return res.status(200).json({
       success: false,
       message: userMsg,
       code: error?.code

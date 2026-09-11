@@ -641,27 +641,15 @@ export const UsersView: React.FC = () => {
                 type="button"
                 disabled={isDeleting}
                 onClick={async () => {
-                  setIsDeleting(true);
-                  try {
-                    await deleteUser(userToDelete.id);
-                  } finally {
-                    setIsDeleting(false);
-                    setUserToDelete(null);
-                  }
+                  if (!userToDelete) return;
+                  const targetId = userToDelete.id;
+                  setUserToDelete(null);
+                  await deleteUser(targetId);
                 }}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-xs transition-colors shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-xs transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
               >
-                {isDeleting ? (
-                  <>
-                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Eliminando de Firebase...</span>
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Confirmar Eliminación</span>
-                  </>
-                )}
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Confirmar Eliminación</span>
               </button>
             </div>
           </div>

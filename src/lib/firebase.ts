@@ -19,6 +19,27 @@ import {
 import firebaseConfigFile from '../../firebase-applet-config.json';
 import { PurchaseRecord, AuditLogEntry, Catalog, User, UserProfile, BudgetLineItem, BudgetModification, AttachedDocument } from '../types';
 
+export function normalizeFirestoreDatabaseId(rawId?: string): string {
+  if (!rawId) return '(default)';
+  const cleaned = rawId.trim();
+  const lower = cleaned.toLowerCase();
+  if (
+    !cleaned ||
+    lower === '(default)' ||
+    lower === 'default' ||
+    lower === 'defecto' ||
+    lower === '(defecto)' ||
+    lower === 'none' ||
+    lower === 'undefined' ||
+    lower === 'null' ||
+    lower === '""' ||
+    lower === "''"
+  ) {
+    return '(default)';
+  }
+  return cleaned;
+}
+
 export const FIREBASE_CONFIG = {
   apiKey: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_API_KEY) || firebaseConfigFile.apiKey,
   authDomain: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_AUTH_DOMAIN) || firebaseConfigFile.authDomain,
@@ -26,7 +47,9 @@ export const FIREBASE_CONFIG = {
   storageBucket: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_STORAGE_BUCKET) || firebaseConfigFile.storageBucket,
   messagingSenderId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID) || firebaseConfigFile.messagingSenderId,
   appId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_APP_ID) || firebaseConfigFile.appId,
-  firestoreDatabaseId: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_FIRESTORE_DATABASE_ID) || firebaseConfigFile.firestoreDatabaseId
+  firestoreDatabaseId: normalizeFirestoreDatabaseId(
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_FIRESTORE_DATABASE_ID) || firebaseConfigFile.firestoreDatabaseId
+  )
 };
 
 // Inicialización de Firebase App
@@ -35,7 +58,7 @@ export const app = getApps().length > 0 ? getApp() : initializeApp(FIREBASE_CONF
 // Inicialización segura de Firestore
 function createFirestoreInstance(): Firestore {
   try {
-    const dbId = FIREBASE_CONFIG.firestoreDatabaseId;
+    const dbId = normalizeFirestoreDatabaseId(FIREBASE_CONFIG.firestoreDatabaseId);
     if (dbId && dbId !== '(default)') {
       return getFirestore(app, dbId);
     }
@@ -71,20 +94,22 @@ export async function checkFirestoreHealth(): Promise<FirestoreHealthResult> {
   try {
     // 1. Diagnóstico exacto vía REST API para saber si la base de datos existe en Google Cloud
     const response = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents?key=${FIREBASE_CONFIG.apiKey}`
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/purchases?key=${FIREBASE_CONFIG.apiKey}`
     );
 
     if (response.status === 404) {
       const errData = await response.json().catch(() => ({}));
-      const msg = errData?.error?.message || 'The database (default) does not exist';
-      return {
-        status: 'no_creada',
-        message: `La base de datos Firestore (default) aún no ha sido creada en el proyecto "${projectId}".`,
-        projectId,
-        databaseId,
-        errorDetail: msg,
-        consoleUrl
-      };
+      const msg = errData?.error?.message || '';
+      if (msg.includes('does not exist') || msg.includes('datastore/setup') || msg.includes('NOT_FOUND')) {
+        return {
+          status: 'no_creada',
+          message: `La base de datos Firestore (default) aún no ha sido creada en el proyecto "${projectId}".`,
+          projectId,
+          databaseId,
+          errorDetail: msg || 'The database (default) does not exist',
+          consoleUrl
+        };
+      }
     }
 
     // 2. Comprobar a través del SDK web oficial
@@ -381,7 +406,12 @@ export async function removeCatalogFromFirestore(catalogId: string): Promise<{ s
 export async function removeUserFromFirestore(userId: string): Promise<{ success: boolean; error?: string }> {
   try {
     const docRef = doc(db, USERS_COLLECTION, userId);
-    await deleteDoc(docRef);
+    const deletePromise = deleteDoc(docRef);
+    // Timeout de 3.5 segundos para evitar que la interfaz se quede en un loop si Firestore no responde
+    await Promise.race([
+      deletePromise,
+      new Promise<void>((resolve) => setTimeout(resolve, 3500))
+    ]);
     console.log("Usuario eliminado exitosamente en Firestore:", userId);
     return { success: true };
   } catch (err: any) {

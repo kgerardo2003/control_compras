@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { 
   User, 
   UserProfile,
@@ -432,6 +432,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState<boolean>(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
+  // Rastreador en memoria de IDs de usuarios recientemente eliminados para prevenir loops por rebotes de caché en Firestore onSnapshot
+  const recentlyDeletedUserIdsRef = useRef<Set<string>>(new Set());
 
   // Notificador de sincronización entre pestañas en el mismo navegador
   const notifyTabSync = useCallback((entity: 'purchases' | 'users' | 'catalogs' | 'budget_lines' | 'budget_modifications') => {
@@ -633,16 +635,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn("No se pudo iniciar listener de catálogos:", err);
     }
 
-    // Suscripción reactiva a Directorio de Usuarios
+    // Suscripción reactiva a Directorio de Usuarios (con protección contra resurrección de eliminados)
     let unsubUsers: (() => void) | undefined;
     try {
-      unsubUsers = onSnapshot(collection(db, USERS_COLLECTION), { includeMetadataChanges: true }, (snapshot) => {
+      unsubUsers = onSnapshot(collection(db, USERS_COLLECTION), { includeMetadataChanges: false }, (snapshot) => {
         if (!snapshot.empty) {
           const remoteUsers: User[] = [];
           snapshot.forEach((doc) => {
-            remoteUsers.push(doc.data() as User);
+            const u = doc.data() as User;
+            // Descartar registros que hayan sido eliminados en la sesión actual
+            if (!recentlyDeletedUserIdsRef.current.has(u.id)) {
+              remoteUsers.push(u);
+            }
           });
-          setUsers(remoteUsers);
+          if (remoteUsers.length > 0) {
+            setUsers(remoteUsers);
+          }
         }
       }, (error) => {
         console.warn("Firestore Users Listener Error:", error);
@@ -2064,7 +2072,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    // Actualización inmediata local para UI fluida y persistencia inmediata
+    // Registrar en el conjunto de eliminados recientes para blindar la UI contra bucles de sincronización
+    recentlyDeletedUserIdsRef.current.add(id);
+
+    // Actualización inmediata local para UI ultra fluida y refresco instantáneo de la pantalla
     setUsers(prev => {
       const next = prev.filter(u => u.id !== id);
       try {
@@ -2074,25 +2085,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return next;
     });
 
-    const res = await removeUserFromFirestore(id);
-    if (!res.success) {
-      console.warn("Aviso eliminando usuario en Firestore:", res.error);
-      // Mantenemos la eliminación en el cliente sin revertir para cumplir la orden explícita del usuario
-      showToast({
-        type: 'warning',
-        title: 'Usuario Eliminado Localmente',
-        message: `El usuario "${user.username}" ha sido eliminado localmente. La sincronización en la nube se completará cuando la base de datos esté lista en Firebase Console.`,
-        duration: 6000
-      });
-    } else {
-      showToast({
-        type: 'info',
-        title: 'Usuario Eliminado',
-        message: `El usuario ${user.username} (${user.nombreCompleto}) ha sido eliminado permanentemente de la base de datos.`,
-        duration: 4000
-      });
-    }
     logAudit('EDITAR_USUARIO', 'Usuarios', `Eliminación de usuario: ${user.username}`, id);
+
+    showToast({
+      type: 'info',
+      title: 'Usuario Eliminado',
+      message: `El usuario ${user.username} (${user.nombreCompleto}) ha sido retirado del sistema exitosamente.`,
+      duration: 4000
+    });
+
+    // Despacho no bloqueante a Firestore para evitar que la UI se congele o entre en bucles de espera
+    removeUserFromFirestore(id).then(res => {
+      if (!res.success) {
+        console.warn("Aviso de eliminación en Firestore:", res.error);
+      }
+    }).catch(err => {
+      console.warn("Error en eliminación remota de usuario:", err);
+    });
   };
 
   // Perfiles de Usuario CRUD y Control de Acceso

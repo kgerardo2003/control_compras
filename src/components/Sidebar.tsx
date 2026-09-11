@@ -369,8 +369,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileOpen, onCloseMobile })
               </span>
               <span className="text-slate-300 font-medium">BD Firestore</span>
             </div>
-            <span className="text-[10px] text-emerald-400 font-mono font-semibold">
-              {firestoreStatus === 'conectado' ? 'En Vivo' : 'Conectando'}
+            <span className={`text-[10px] font-mono font-semibold ${
+              firestoreStatus === 'conectado'
+                ? 'text-emerald-400'
+                : firestoreStatus === 'no_creada'
+                ? 'text-amber-400'
+                : 'text-slate-400'
+            }`}>
+              {firestoreStatus === 'conectado' ? 'En Vivo' : firestoreStatus === 'no_creada' ? 'No Creada' : 'Conectando'}
             </span>
           </div>
 
