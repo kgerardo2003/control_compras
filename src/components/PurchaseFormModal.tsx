@@ -602,11 +602,11 @@ export const PurchaseFormModal: React.FC = () => {
               }`}
             >
               <FolderTree className="w-3.5 h-3.5" />
-              <span>Historial de Acciones (Árbol)</span>
+              <span>Observaciones y Hoja de Ruta (Árbol)</span>
               <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                 modalTab === 'arbol' ? 'bg-slate-900 text-amber-300' : 'bg-slate-700 text-slate-300'
               }`}>
-                {purchaseToEdit?.bitacoraCambios?.length ? `${purchaseToEdit.bitacoraCambios.length + 5} registros` : '6 fases'}
+                {observacionesList.length || (purchaseToEdit?.observaciones ? 1 : 0)}
               </span>
             </button>
           </div>
@@ -619,7 +619,7 @@ export const PurchaseFormModal: React.FC = () => {
                 className="text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer text-xs font-semibold"
               >
                 <GitBranch className="w-3.5 h-3.5" />
-                <span>Ver Árbol de Acciones</span>
+                <span>Ver Árbol de Observaciones y Hoja de Ruta</span>
               </button>
             ) : (
               <button
@@ -643,9 +643,9 @@ export const PurchaseFormModal: React.FC = () => {
                   <FolderTree className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-bold text-slate-900">Historial y Registro de Acciones del Expediente</h3>
+                  <h3 className="text-xs font-bold text-slate-900">Árbol de Observaciones y Hoja de Ruta</h3>
                   <p className="text-[11px] text-slate-500">
-                    Registro estructurado por fases, hitos completados y bitácora auditada en tiempo real.
+                    Registro de observaciones en orden cronológico del más reciente al más antiguo.
                   </p>
                 </div>
               </div>
@@ -658,7 +658,24 @@ export const PurchaseFormModal: React.FC = () => {
                 <span>Volver al Formulario</span>
               </button>
             </div>
-            <PurchaseActionTree purchase={livePurchasePreview} />
+            <PurchaseActionTree 
+              purchase={livePurchasePreview} 
+              onAddObservation={(comment) => {
+                const now = new Date();
+                const newEntry: PurchaseObservationEntry = {
+                  id: `obs_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                  fechaHora: now.toISOString(),
+                  fecha: now.toISOString().slice(0, 10),
+                  hora: now.toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit', hour12: false }),
+                  usuario: currentUser?.nombreCompleto || currentUser?.username || 'Usuario Actual',
+                  rol: currentUser?.rol || 'Usuario',
+                  comentario: comment.trim()
+                };
+                setObservacionesList(prev => [...prev, newEntry]);
+              }}
+              canAddObservation={true}
+              currentUser={currentUser || undefined}
+            />
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
@@ -868,7 +885,17 @@ export const PurchaseFormModal: React.FC = () => {
                   {showDocumentPreview && f56Documento && (
                     <DocumentPreview
                       document={f56Documento}
-                      purchase={livePurchasePreview}
+                      purchase={{
+                        f56e,
+                        f56,
+                        descripcion,
+                        monto: Number(monto) || 0,
+                        dependenciaSolicitante,
+                        proveedorAdjudicado,
+                        areaSolicitante: purchaseToEdit?.areaSolicitante,
+                        fechaDictamenGIT: purchaseToEdit?.fechaDictamenGIT,
+                        fechaElaboracionOficioGIT: purchaseToEdit?.fechaElaboracionOficioGIT
+                      }}
                       title="Vista Previa de Documento F56-e"
                       onClose={() => setShowDocumentPreview(false)}
                     />

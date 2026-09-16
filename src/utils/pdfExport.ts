@@ -21,6 +21,11 @@ export interface ExportPurchasesPDFOptions {
   } | null;
   filenamePrefix?: string;
   includeSummaryTable?: boolean;
+  customHeaders?: string[];
+  customRows?: (string | number)[][];
+  customFooter?: (string | number)[] | (string | number)[][];
+  customColumnStyles?: Record<number, any>;
+  metaStats?: Array<{ label: string; value: string }>;
 }
 
 /**
@@ -36,6 +41,11 @@ export function generatePurchasesPDF(options: ExportPurchasesPDFOptions): string
     currentUser,
     filenamePrefix = 'Reporte_Adquisiciones_GIT_OJ',
     includeSummaryTable = true,
+    customHeaders,
+    customRows,
+    customFooter,
+    customColumnStyles,
+    metaStats,
   } = options;
 
   // Orientación horizontal (landscape) en formato A4 para óptima legibilidad de columnas
@@ -213,7 +223,7 @@ export function generatePurchasesPDF(options: ExportPurchasesPDFOptions): string
   currentY += boxHeight + 4;
 
   // 4. TABLA DE ADQUISICIONES CON AUTO-TABLE
-  const tableHeaders = [
+  const defaultHeaders = [
     '#',
     'NOG',
     'F56-e / F56',
@@ -225,7 +235,7 @@ export function generatePurchasesPDF(options: ExportPurchasesPDFOptions): string
     'Proveedor Adjudicado',
   ];
 
-  const tableRows = purchases.map((p, index) => {
+  const defaultRows = purchases.map((p, index) => {
     const dictamenText = p.evaluadoGIT === 'Sí'
       ? `Sí ${p.fechaDictamenGIT ? `(${p.fechaDictamenGIT})` : ''}`
       : 'No';
@@ -245,10 +255,47 @@ export function generatePurchasesPDF(options: ExportPurchasesPDFOptions): string
     ];
   });
 
+  const finalHeaders = customHeaders || defaultHeaders;
+  const finalRows: string[][] = customRows 
+    ? customRows.map(row => row.map(cell => String(cell ?? ''))) 
+    : defaultRows;
+
+  const defaultFooter: string[][] = [
+    [
+      '',
+      '',
+      '',
+      `TOTAL CONSOLIDADO (${purchases.length} ADQUISICIONES LISTADAS)`,
+      '',
+      `${conDictamen} Dictámenes`,
+      `${adjudicados} Adjudicadas`,
+      formatQuetzales(totalMonto),
+      '',
+    ],
+  ];
+
+  const finalFoot: string[][] | undefined = customFooter 
+    ? (Array.isArray(customFooter[0]) 
+        ? (customFooter as (string | number)[][]).map(row => row.map(c => String(c ?? '')))
+        : [(customFooter as (string | number)[]).map(c => String(c ?? ''))])
+    : (customRows ? undefined : defaultFooter);
+
+  const defaultColumnStyles = {
+    0: { cellWidth: 8, halign: 'center' as const },          // #
+    1: { cellWidth: 20, halign: 'center' as const, fontStyle: 'bold' as const }, // NOG
+    2: { cellWidth: 25, halign: 'center' as const },         // F56-e / F56
+    3: { cellWidth: 70, halign: 'left' as const },           // Descripción
+    4: { cellWidth: 38, halign: 'left' as const },           // Área
+    5: { cellWidth: 25, halign: 'center' as const },         // Dictamen GIT
+    6: { cellWidth: 24, halign: 'center' as const, fontStyle: 'bold' as const }, // Estatus
+    7: { cellWidth: 27, halign: 'right' as const, fontStyle: 'bold' as const },  // Monto
+    8: { cellWidth: 32, halign: 'left' as const },           // Proveedor
+  };
+
   autoTable(doc, {
     startY: currentY,
-    head: [tableHeaders],
-    body: tableRows,
+    head: [finalHeaders],
+    body: finalRows,
     theme: 'grid',
     margin: { left: marginX, right: marginX, bottom: 16 },
     headStyles: {
@@ -271,20 +318,10 @@ export function generatePurchasesPDF(options: ExportPurchasesPDFOptions): string
     alternateRowStyles: {
       fillColor: [248, 250, 252], // Slate 50
     },
-    columnStyles: {
-      0: { cellWidth: 8, halign: 'center' },          // #
-      1: { cellWidth: 20, halign: 'center', fontStyle: 'bold' }, // NOG
-      2: { cellWidth: 25, halign: 'center' },         // F56-e / F56
-      3: { cellWidth: 70, halign: 'left' },           // Descripción
-      4: { cellWidth: 38, halign: 'left' },           // Área
-      5: { cellWidth: 25, halign: 'center' },         // Dictamen GIT
-      6: { cellWidth: 24, halign: 'center', fontStyle: 'bold' }, // Estatus
-      7: { cellWidth: 27, halign: 'right', fontStyle: 'bold' },  // Monto
-      8: { cellWidth: 32, halign: 'left' },           // Proveedor
-    },
+    columnStyles: customColumnStyles || (customRows ? undefined : defaultColumnStyles),
     didParseCell: (data) => {
-      // Resaltado de estatus
-      if (data.section === 'body' && data.column.index === 6) {
+      // Resaltado de estatus si no es tabla personalizada
+      if (!customRows && data.section === 'body' && data.column.index === 6) {
         const val = String(data.cell.raw);
         if (val === 'Adjudicación') {
           data.cell.styles.textColor = [29, 78, 216]; // Blue 700
@@ -297,26 +334,14 @@ export function generatePurchasesPDF(options: ExportPurchasesPDFOptions): string
         }
       }
       // Resaltado de Dictamen GIT
-      if (data.section === 'body' && data.column.index === 5) {
+      if (!customRows && data.section === 'body' && data.column.index === 5) {
         const val = String(data.cell.raw);
         if (val.startsWith('Sí')) {
           data.cell.styles.textColor = [4, 120, 87]; // Emerald 700
         }
       }
     },
-    foot: [
-      [
-        '',
-        '',
-        '',
-        `TOTAL CONSOLIDADO (${purchases.length} ADQUISICIONES LISTADAS)`,
-        '',
-        `${conDictamen} Dictámenes`,
-        `${adjudicados} Adjudicadas`,
-        formatQuetzales(totalMonto),
-        '',
-      ],
-    ],
+    foot: finalFoot,
     footStyles: {
       fillColor: [241, 245, 249], // Slate 100
       textColor: [15, 23, 42],

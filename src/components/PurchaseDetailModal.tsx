@@ -23,6 +23,7 @@ import {
   Award
 } from 'lucide-react';
 import { formatQuetzales, formatDate, formatDateTime, getModalidadCompraByMonto } from '../utils/formatters';
+import { PurchaseObservationEntry, PurchaseChangeLogEntry } from '../types';
 import { InstitutionalReportModal } from './InstitutionalReportModal';
 import { DocumentPreview } from './DocumentPreview';
 import { downloadDocumentFile } from '../utils/documentUtils';
@@ -52,6 +53,7 @@ export const PurchaseDetailModal: React.FC = () => {
     setIsPurchaseModalOpen, 
     setPurchaseToEdit,
     deletePurchase,
+    updatePurchase,
     currentUser 
   } = useApp();
 
@@ -59,6 +61,46 @@ export const PurchaseDetailModal: React.FC = () => {
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [showDocumentPreview, setShowDocumentPreview] = useState(true);
   const [activeTab, setActiveTab] = useState<'general' | 'arbol' | 'bitacora' | 'documento'>('general');
+
+  const handleAddObservation = (comentario: string) => {
+    if (!selectedPurchase || !comentario.trim()) return;
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
+    const timeStr = now.toTimeString().slice(0, 5);
+    const newObs: PurchaseObservationEntry = {
+      id: `obs-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      fechaHora: now.toISOString(),
+      fecha: dateStr,
+      hora: timeStr,
+      usuario: currentUser?.nombreCompleto || currentUser?.username || 'Usuario Actual',
+      rol: currentUser?.rol || 'Operador',
+      comentario: comentario.trim()
+    };
+    const updatedObsList = [...(selectedPurchase.observacionesList || []), newObs];
+
+    const logEntry: PurchaseChangeLogEntry = {
+      id: `log-${Date.now()}`,
+      fechaHora: now.toISOString(),
+      usuario: currentUser?.nombreCompleto || currentUser?.username || 'Operador',
+      rol: currentUser?.rol || 'Operador',
+      accion: 'OBSERVACION_HOJA_RUTA',
+      estatus: selectedPurchase.estatusEvento || 'En Proceso',
+      detalles: `Observación agregada a la Hoja de Ruta por ${currentUser?.nombreCompleto || currentUser?.username}: "${comentario.trim().slice(0, 60)}${comentario.trim().length > 60 ? '...' : ''}"`
+    };
+    const updatedBitacora = [logEntry, ...(selectedPurchase.bitacoraCambios || [])];
+
+    const updatedPurchaseData = {
+      ...selectedPurchase,
+      observacionesList: updatedObsList,
+      bitacoraCambios: updatedBitacora
+    };
+
+    updatePurchase(selectedPurchase.id, {
+      observacionesList: updatedObsList,
+      bitacoraCambios: updatedBitacora
+    });
+    setSelectedPurchase(updatedPurchaseData);
+  };
 
   useEffect(() => {
     if (
@@ -176,9 +218,9 @@ export const PurchaseDetailModal: React.FC = () => {
                 }`}
               >
                 <GitBranch className="w-3.5 h-3.5" />
-                <span>Ruta en Árbol (Línea de Tiempo)</span>
+                <span>Observaciones y Hoja de Ruta (Árbol)</span>
                 <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-700 text-white">
-                  Árbol
+                  {selectedPurchase.observacionesList?.length || (selectedPurchase.observaciones ? 1 : 0)}
                 </span>
               </button>
 
@@ -266,31 +308,15 @@ export const PurchaseDetailModal: React.FC = () => {
               </div>
             </div>
 
-            {/* Vista: Ruta en forma de Árbol de la Ficha */}
+            {/* Vista: Árbol de Observaciones y Hoja de Ruta */}
             {activeTab === 'arbol' && (
               <div className="pt-1 space-y-3">
-                <div className="bg-gradient-to-r from-amber-900 to-slate-900 text-white p-3.5 rounded-xl border border-amber-800 shadow-xs flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
-                      <GitBranch className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-bold text-white">
-                        Línea de Tiempo en Árbol de la Ficha
-                      </h4>
-                      <p className="text-[11px] text-amber-200/80">
-                        NOG: <span className="font-mono font-bold text-white">{selectedPurchase.nog}</span> • F56-e: <span className="font-mono font-bold text-white">{selectedPurchase.f56e}</span>
-                      </p>
-                    </div>
-                  </div>
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${badgeClass}`}>
-                    {selectedPurchase.estatusEvento}
-                  </span>
-                </div>
-
                 <PurchaseActionTree 
                   purchase={selectedPurchase} 
-                  initialFilterState="recorridos"
+                  initialFilterState="todos"
+                  onAddObservation={handleAddObservation}
+                  canAddObservation={canEdit}
+                  currentUser={currentUser || undefined}
                 />
               </div>
             )}
@@ -574,50 +600,6 @@ export const PurchaseDetailModal: React.FC = () => {
               )}
             </div>
 
-            {/* Hoja de Ruta: Registro de Observaciones una a una */}
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                  <MessageSquare className="w-3.5 h-3.5 text-amber-600" />
-                  Observaciones y Hoja de Ruta
-                </h3>
-                {selectedPurchase.observacionesList && selectedPurchase.observacionesList.length > 0 && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                    {selectedPurchase.observacionesList.length} registro(s)
-                  </span>
-                )}
-              </div>
-
-              {selectedPurchase.observacionesList && selectedPurchase.observacionesList.length > 0 ? (
-                <div className="space-y-2">
-                  {selectedPurchase.observacionesList.map((obs, idx) => (
-                    <div key={obs.id || idx} className="p-3 bg-white rounded-lg border border-slate-200 shadow-2xs">
-                      <div className="flex items-center justify-between gap-2 pb-1 mb-1 border-b border-slate-100 text-[11px]">
-                        <span className="font-bold text-slate-800 flex items-center gap-1">
-                          <UserIcon className="w-3 h-3 text-amber-600" />
-                          {obs.usuario}
-                        </span>
-                        <span className="text-slate-400 font-mono text-[10px]">
-                          {formatDateTime(obs.fecha)}
-                        </span>
-                      </div>
-                      <p className="text-slate-700 leading-relaxed text-xs whitespace-pre-wrap">
-                        {obs.comentario}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : selectedPurchase.observaciones ? (
-                <div className="p-3 bg-white rounded-lg border border-slate-200 text-slate-700 leading-relaxed">
-                  {selectedPurchase.observaciones}
-                </div>
-              ) : (
-                <p className="text-slate-400 italic text-[11px] py-1">
-                  Sin observaciones registradas en la hoja de ruta.
-                </p>
-              )}
-            </div>
-
             {/* Tarjeta Resumen del Último Estatus */}
             <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -648,7 +630,7 @@ export const PurchaseDetailModal: React.FC = () => {
                   className="px-3 py-1.5 rounded-lg bg-amber-800 hover:bg-amber-900 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
                 >
                   <GitBranch className="w-3.5 h-3.5" />
-                  <span>Ver Ruta en Árbol</span>
+                  <span>Ver Árbol de Observaciones y Hoja de Ruta</span>
                 </button>
                 {canEdit && (
                   <button
@@ -663,7 +645,7 @@ export const PurchaseDetailModal: React.FC = () => {
               </div>
             </div>
 
-            {/* Sección Ruta y Línea de Tiempo en Árbol dentro de Ficha General */}
+            {/* Sección Observaciones y Hoja de Ruta en Árbol dentro de Ficha General */}
             <div className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-3">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                 <div className="flex items-center gap-2">
@@ -671,11 +653,17 @@ export const PurchaseDetailModal: React.FC = () => {
                     <GitBranch className="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
-                      Ruta y Línea de Tiempo en Árbol
-                    </span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
+                        Observaciones y Hoja de Ruta (Árbol de Registro)
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-full shadow-2xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span>Semáforo Verde: Último Movimiento</span>
+                      </span>
+                    </div>
                     <span className="text-[11px] text-slate-500">
-                      Ruta transitada por esta adquisición
+                      Registro cronológico de observaciones (del más reciente al más antiguo)
                     </span>
                   </div>
                 </div>
@@ -692,7 +680,10 @@ export const PurchaseDetailModal: React.FC = () => {
               <PurchaseActionTree 
                 purchase={selectedPurchase} 
                 compact={true}
-                initialFilterState="recorridos"
+                initialFilterState="todos"
+                onAddObservation={handleAddObservation}
+                canAddObservation={canEdit}
+                currentUser={currentUser || undefined}
               />
             </div>
           </>

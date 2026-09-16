@@ -1,32 +1,24 @@
 import React, { useState, useMemo } from 'react';
 import { 
   GitBranch, 
-  GitCommit, 
-  GitMerge, 
-  CheckCircle2, 
   Clock, 
-  AlertCircle, 
-  FileText, 
   User, 
   Calendar, 
-  Award, 
   Ban, 
-  Paperclip, 
-  ShieldCheck, 
   ChevronRight, 
   ChevronDown, 
   FolderTree, 
-  Sparkles,
-  Layers,
-  Filter,
-  Eye,
-  ExternalLink,
-  Search
+  Search, 
+  MessageSquare, 
+  Plus, 
+  Send, 
+  ArrowDownUp, 
+  User as UserIcon 
 } from 'lucide-react';
-import { PurchaseRecord, StatusTimelineEvent, PurchaseChangeLogEntry } from '../types';
-import { formatDate, formatDateTime, formatQuetzales } from '../utils/formatters';
+import { PurchaseRecord, PurchaseObservationEntry } from '../types';
+import { formatDate, formatDateTime } from '../utils/formatters';
 
-interface TreeNodeItem {
+export interface TreeNodeItem {
   id: string;
   titulo: string;
   subtitulo?: string;
@@ -35,15 +27,12 @@ interface TreeNodeItem {
   responsable?: string;
   rol?: string;
   estado: 'completado' | 'en_proceso' | 'pendiente' | 'desierto';
-  tipo: 'hito' | 'bitacora' | 'documento' | 'sistema';
+  tipo: 'observacion';
   observaciones?: string;
-  documentoRef?: string;
-  detalles?: string;
-  ip?: string;
-  hijos?: TreeNodeItem[];
+  correlativo?: number;
 }
 
-interface TreeBranch {
+export interface TreeBranch {
   id: string;
   titulo: string;
   descripcion: string;
@@ -54,23 +43,30 @@ interface TreeBranch {
   nodos: TreeNodeItem[];
 }
 
-interface PurchaseActionTreeProps {
+export interface PurchaseActionTreeProps {
   purchase: Partial<PurchaseRecord>;
   onSelectAction?: (node: TreeNodeItem) => void;
   compact?: boolean;
-  initialFilterState?: 'todos' | 'completados' | 'en_proceso' | 'pendientes' | 'recorridos';
+  initialFilterState?: 'todos' | 'observaciones';
+  onAddObservation?: (comentario: string) => void;
+  canAddObservation?: boolean;
+  currentUser?: { nombreCompleto?: string; username?: string; rol?: string };
 }
 
 export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
   purchase,
   compact = false,
-  initialFilterState = 'todos'
+  initialFilterState = 'todos',
+  onAddObservation,
+  canAddObservation = false,
+  currentUser
 }) => {
   const [viewMode, setViewMode] = useState<'jerarquico' | 'cronologico'>('jerarquico');
-  const [filterState, setFilterState] = useState<'todos' | 'completados' | 'en_proceso' | 'pendientes' | 'recorridos'>(initialFilterState);
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedBranches, setCollapsedBranches] = useState<Record<string, boolean>>({});
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
+  const [nuevaObservacion, setNuevaObservacion] = useState('');
+  const [isSubmittingObs, setIsSubmittingObs] = useState(false);
 
   // Alternar colapso de rama
   const toggleBranch = (branchId: string) => {
@@ -109,295 +105,119 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
     setExpandedNodes({});
   };
 
-  // Construir las ramas del árbol institucional
+  // Manejar envío de nueva observación si está habilitado
+  const handleFormSubmitObservation = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nuevaObservacion.trim() || !onAddObservation || isSubmittingObs) return;
+    setIsSubmittingObs(true);
+    try {
+      onAddObservation(nuevaObservacion.trim());
+      setNuevaObservacion('');
+    } finally {
+      setIsSubmittingObs(false);
+    }
+  };
+
+  // Construir el árbol de Observaciones y Hoja de Ruta ordenado del más reciente al más antiguo
   const branches: TreeBranch[] = useMemo(() => {
     const list: TreeBranch[] = [];
+    const obsNodes: TreeNodeItem[] = [];
 
-    // --- RAMA 1: Solicitud y Requerimiento Oficial ---
-    const rama1Nodes: TreeNodeItem[] = [
-      {
-        id: 'node-solicitud-inicial',
-        titulo: 'Registro de Solicitud Inicial F56-e',
-        subtitulo: `Formulario F56-e: ${purchase.f56e || 'Pendiente'}`,
-        fecha: purchase.fechaSolicitud || undefined,
-        responsable: purchase.dependenciaSolicitante || purchase.areaSolicitante || 'Área Solicitante',
-        estado: purchase.fechaSolicitud ? 'completado' : 'en_proceso',
-        tipo: 'hito',
-        observaciones: purchase.descripcion ? `Objeto: ${purchase.descripcion.slice(0, 120)}...` : 'Ingreso oficial de la necesidad tecnológica.',
-        documentoRef: purchase.f56e ? `Forma F56-e No. ${purchase.f56e}` : undefined
-      },
-      {
-        id: 'node-vobo',
-        titulo: 'Visto Bueno de Jefatura (VoBo)',
-        subtitulo: 'Aprobación técnica inicial de la unidad requirente',
-        fecha: purchase.fechaVoBo || undefined,
-        responsable: purchase.areaSolicitante || 'Jefatura de Área',
-        estado: purchase.fechaVoBo ? 'completado' : purchase.fechaSolicitud ? 'en_proceso' : 'pendiente',
-        tipo: 'hito',
-        observaciones: purchase.fechaVoBo ? `Visto bueno emitido el ${formatDate(purchase.fechaVoBo)}.` : 'Pendiente de emisión de VoBo formal.'
-      },
-      {
-        id: 'node-autorizacion',
-        titulo: 'Autorización Formal del Formulario',
-        subtitulo: 'Aval superior para trámite presupuestario',
-        fecha: purchase.fechaAutorizado || undefined,
-        responsable: 'Autoridad Solicitante',
-        estado: purchase.fechaAutorizado ? 'completado' : 'pendiente',
-        tipo: 'hito',
-        observaciones: purchase.fechaAutorizado ? `Autorizado oficialmente el ${formatDate(purchase.fechaAutorizado)}.` : 'En espera de firma y autorización.'
-      }
-    ];
+    if (purchase.observacionesList && purchase.observacionesList.length > 0) {
+      // Ordenar cronológicamente del más reciente al más antiguo (descendente por fecha y hora)
+      const sortedObs = [...purchase.observacionesList].sort((a, b) => {
+        const timeA = a.fechaHora 
+          ? new Date(a.fechaHora).getTime() 
+          : new Date(`${a.fecha || '1970-01-01'}T${a.hora || '00:00:00'}`).getTime();
+        const timeB = b.fechaHora 
+          ? new Date(b.fechaHora).getTime() 
+          : new Date(`${b.fecha || '1970-01-01'}T${b.hora || '00:00:00'}`).getTime();
+        return timeB - timeA;
+      });
 
-    const rama1Done = rama1Nodes.filter(n => n.estado === 'completado').length;
-    list.push({
-      id: 'branch-solicitud',
-      titulo: '1. Requerimiento y Aprobación Inicial',
-      descripcion: 'Formulario F56-e, justificación técnica y firmas de autorización',
-      icono: <FileText className="w-4 h-4 text-blue-600" />,
-      color: 'blue',
-      completados: rama1Done,
-      total: rama1Nodes.length,
-      nodos: rama1Nodes
-    });
+      const totalCount = sortedObs.length;
 
-    // --- RAMA 2: Dictamen y Gestión Técnica GIT ---
-    const evaluado = purchase.evaluadoGIT === 'Sí';
-    const rama2Nodes: TreeNodeItem[] = [
-      {
-        id: 'node-git-evaluacion',
-        titulo: 'Revisión Técnica por Departamento de Compras',
-        subtitulo: 'Verificación de estándares, arquitectura y compatibilidad',
-        fecha: purchase.fechaDictamenGIT || purchase.fechaSolicitud,
-        responsable: 'Departamento de Compras',
-        estado: evaluado ? 'completado' : 'en_proceso',
-        tipo: 'hito',
-        observaciones: evaluado 
-          ? 'Expediente analizado por los especialistas y calificado técnicamente viable.' 
-          : 'En proceso de evaluación técnica por el equipo de compras e ingeniería.'
-      },
-      {
-        id: 'node-git-dictamen',
-        titulo: 'Emisión de Dictamen Técnico Oficial',
-        subtitulo: 'Resolución técnica vinculante para compras TI',
-        fecha: purchase.fechaDictamenGIT || undefined,
-        responsable: 'Departamento de Compras',
-        estado: purchase.fechaDictamenGIT ? 'completado' : evaluado ? 'en_proceso' : 'pendiente',
-        tipo: 'hito',
-        observaciones: purchase.fechaDictamenGIT 
-          ? `Dictamen técnico favorable emitido con fecha ${formatDate(purchase.fechaDictamenGIT)}.` 
-          : 'Pendiente de emisión formal de dictamen.',
-        documentoRef: purchase.fechaDictamenGIT ? `Dictamen GIT (${purchase.fechaDictamenGIT})` : undefined
-      },
-      {
-        id: 'node-git-oficio',
-        titulo: 'Oficio de Traslado y Gestión de Compra',
-        subtitulo: 'Remisión de expediente dictaminado para contratación',
-        fecha: purchase.fechaElaboracionOficioGIT || undefined,
-        responsable: 'Departamento de Compras',
-        estado: purchase.fechaElaboracionOficioGIT ? 'completado' : 'pendiente',
-        tipo: 'hito',
-        observaciones: purchase.fechaElaboracionOficioGIT 
-          ? `Oficio técnico elaborado y tramitado el ${formatDate(purchase.fechaElaboracionOficioGIT)}.` 
-          : 'Pendiente de elaboración de oficio de traslado.',
-        documentoRef: purchase.fechaElaboracionOficioGIT ? `Oficio GIT: ${purchase.fechaElaboracionOficioGIT}` : undefined
-      }
-    ];
-
-    const rama2Done = rama2Nodes.filter(n => n.estado === 'completado').length;
-    list.push({
-      id: 'branch-git',
-      titulo: '2. Dictamen y Gestión Técnica (GIT)',
-      descripcion: 'Evaluación técnica, dictamen vinculante y oficio de remisión',
-      icono: <ShieldCheck className="w-4 h-4 text-emerald-600" />,
-      color: 'emerald',
-      completados: rama2Done,
-      total: rama2Nodes.length,
-      nodos: rama2Nodes
-    });
-
-    // --- RAMA 3: Guatecompras y Concurrencia ---
-    const rama3Nodes: TreeNodeItem[] = [
-      {
-        id: 'node-guatecompras-publicacion',
-        titulo: 'Publicación en Portal Guatecompras',
-        subtitulo: `NOG: ${purchase.nog || 'Pendiente de publicación'}`,
-        fecha: purchase.fechaPublicacion || undefined,
-        responsable: 'Dirección de Compras',
-        estado: purchase.fechaPublicacion ? 'completado' : 'pendiente',
-        tipo: 'hito',
-        observaciones: purchase.fechaPublicacion 
-          ? `Publicado oficialmente en Guatecompras el ${formatDate(purchase.fechaPublicacion)}. Modalidad: ${purchase.modalidadCompra || 'Cotización'}.` 
-          : 'En preparación para publicación en Guatecompras.',
-        documentoRef: purchase.nog ? `NOG Guatecompras: ${purchase.nog}` : undefined
-      },
-      {
-        id: 'node-guatecompras-ofertas',
-        titulo: 'Recepción y Apertura de Ofertas',
-        subtitulo: `Oferentes registrados: ${purchase.cantidadOfertas ?? 0}`,
-        fecha: purchase.fechaOfertas || undefined,
-        responsable: 'Junta de Cotización / Compras',
-        estado: (purchase.cantidadOfertas !== undefined && purchase.cantidadOfertas > 0) || purchase.fechaOfertas 
-          ? 'completado' 
-          : purchase.fechaPublicacion ? 'en_proceso' : 'pendiente',
-        tipo: 'hito',
-        observaciones: (purchase.cantidadOfertas || 0) > 0 
-          ? `Se recibieron ${purchase.cantidadOfertas} ofertas válidas de proveedores en el plazo estipulado.` 
-          : 'En espera del cierre del período de recepción de ofertas.'
-      }
-    ];
-
-    const rama3Done = rama3Nodes.filter(n => n.estado === 'completado').length;
-    list.push({
-      id: 'branch-guatecompras',
-      titulo: '3. Portal Guatecompras y Oferentes',
-      descripcion: 'Publicación del NOG, concurrencia y recepción de ofertas técnicas',
-      icono: <ExternalLink className="w-4 h-4 text-purple-600" />,
-      color: 'purple',
-      completados: rama3Done,
-      total: rama3Nodes.length,
-      nodos: rama3Nodes
-    });
-
-    // --- RAMA 4: Resolución, Adjudicación y Pago ---
-    const esAdjudicado = purchase.estatusEvento === 'Adjudicación';
-    const esDesierto = purchase.estatusEvento === 'Desierto' || purchase.estatusEvento === 'Prescindido';
-    
-    const rama4Nodes: TreeNodeItem[] = [
-      {
-        id: 'node-adjudicacion-resolucion',
-        titulo: esDesierto ? `Resolución: Evento ${purchase.estatusEvento}` : 'Resolución de Adjudicación Definitiva',
-        subtitulo: esAdjudicado 
-          ? `Proveedor: ${purchase.proveedorAdjudicado || 'Adjudicado'}` 
-          : esDesierto 
-            ? 'Evento declarado sin adjudicación' 
-            : 'Calificación técnica y económica en curso',
-        fecha: purchase.fechaAdjudicacion || undefined,
-        responsable: 'Autoridad Superior / Junta',
-        estado: esAdjudicado ? 'completado' : esDesierto ? 'desierto' : 'pendiente',
-        tipo: 'hito',
-        observaciones: esAdjudicado 
-          ? `Adjudicado formalmente a ${purchase.proveedorAdjudicado || 'proveedor seleccionado'} por un monto de Q${(purchase.monto || 0).toLocaleString('es-GT', { minimumFractionDigits: 2 })}.`
-          : esDesierto 
-            ? `El evento fue declarado ${purchase.estatusEvento} según acta de junta.`
-            : 'En espera de resolución final de adjudicación.'
-      },
-      {
-        id: 'node-pago-compromiso',
-        titulo: 'Estado de Compromiso y Ejecución de Pago',
-        subtitulo: `Estatus actual: ${purchase.estadoPago || 'Pendiente'}`,
-        responsable: 'Gerencia Financiera',
-        estado: purchase.estadoPago === 'Pagado' ? 'completado' : purchase.estadoPago === 'En trámite' ? 'en_proceso' : 'pendiente',
-        tipo: 'hito',
-        observaciones: `Renglón presupuestario asignado: [${purchase.renglonPresupuestario || '158'}]. Monto de reserva: Q${(purchase.monto || 0).toLocaleString('es-GT', { minimumFractionDigits: 2 })}.`
-      }
-    ];
-
-    const rama4Done = rama4Nodes.filter(n => n.estado === 'completado').length;
-    list.push({
-      id: 'branch-adjudicacion',
-      titulo: '4. Resolución y Liquidación',
-      descripcion: 'Adjudicación formal, proveedor contratado y ejecución presupuestaria',
-      icono: <Award className="w-4 h-4 text-amber-600" />,
-      color: 'amber',
-      completados: rama4Done,
-      total: rama4Nodes.length,
-      nodos: rama4Nodes
-    });
-
-    // --- RAMA 5: Expediente y Documentos Digitales ---
-    const tieneDoc = Boolean(purchase.f56Documento?.nombre);
-    const rama5Nodes: TreeNodeItem[] = [
-      {
-        id: 'node-doc-f56',
-        titulo: tieneDoc ? `Documento Digitalizado: ${purchase.f56Documento?.nombre}` : 'Documento Digitalizado F56 (Físico / Escaneado)',
-        subtitulo: tieneDoc 
-          ? `Tamaño: ${((purchase.f56Documento?.tamano || 0) / 1024).toFixed(1)} KB • Tipo: ${purchase.f56Documento?.tipo || 'PDF'}` 
-          : 'No se ha adjuntado archivo aún',
-        fecha: purchase.f56Documento?.fechaSubida ? purchase.f56Documento.fechaSubida.slice(0, 10) : undefined,
-        hora: purchase.f56Documento?.fechaSubida ? purchase.f56Documento.fechaSubida.slice(11, 16) : undefined,
+      sortedObs.forEach((obs, idx) => {
+        const numRegistro = totalCount - idx;
+        obsNodes.push({
+          id: obs.id || `obs-node-${idx}`,
+          titulo: `Observación de Hoja de Ruta #${numRegistro}`,
+          subtitulo: `Registrada por ${obs.usuario}${obs.rol ? ` • Rol: ${obs.rol}` : ''}`,
+          fecha: obs.fecha || (obs.fechaHora ? obs.fechaHora.slice(0, 10) : undefined),
+          hora: obs.hora || (obs.fechaHora ? obs.fechaHora.slice(11, 16) : undefined),
+          responsable: obs.usuario,
+          rol: obs.rol,
+          estado: 'completado',
+          tipo: 'observacion',
+          observaciones: obs.comentario,
+          correlativo: numRegistro
+        });
+      });
+    } else if (purchase.observaciones && purchase.observaciones.trim()) {
+      // Compatibilidad con texto de observación previa
+      obsNodes.push({
+        id: 'obs-node-general',
+        titulo: 'Observación de Hoja de Ruta',
+        subtitulo: `Registrada por ${purchase.creadoPor || 'Operador'}`,
+        fecha: purchase.fechaRecepcion || purchase.fechaSolicitud || (purchase.fechaCreacion ? purchase.fechaCreacion.slice(0, 10) : undefined),
+        hora: purchase.fechaCreacion ? purchase.fechaCreacion.slice(11, 16) : undefined,
         responsable: purchase.creadoPor || 'Operador',
-        estado: tieneDoc ? 'completado' : 'en_proceso',
-        tipo: 'documento',
-        observaciones: tieneDoc 
-          ? `Archivo incorporado de forma inmutable al expediente. Respaldo verificado en almacenamiento seguro.`
-          : 'Se requiere adjuntar el documento físico digitalizado para completar el expediente.',
-        documentoRef: purchase.f56Documento?.nombre
-      }
-    ];
-
-    list.push({
-      id: 'branch-documentos',
-      titulo: '5. Documentación Digital Oficial',
-      descripcion: 'Formulario F56-e digitalizado, comprobantes y sellos de seguridad',
-      icono: <Paperclip className="w-4 h-4 text-sky-600" />,
-      color: 'sky',
-      completados: tieneDoc ? 1 : 0,
-      total: 1,
-      nodos: rama5Nodes
-    });
-
-    // --- RAMA 6: Registro de Auditoría y Acciones del Operador ---
-    if (purchase.bitacoraCambios && purchase.bitacoraCambios.length > 0) {
-      const bitacoraNodes: TreeNodeItem[] = purchase.bitacoraCambios.map(entry => ({
-        id: entry.id,
-        titulo: `Acción: ${entry.accion} (${entry.estatus || 'Registrada'})`,
-        subtitulo: `Por ${entry.usuario} • Rol: ${entry.rol || 'Operador'}`,
-        fecha: entry.fechaHora.slice(0, 10),
-        hora: entry.fechaHora.slice(11, 19),
-        responsable: entry.usuario,
-        rol: entry.rol,
         estado: 'completado',
-        tipo: 'bitacora',
-        observaciones: entry.detalles,
-        ip: entry.ip
-      }));
-
-      list.push({
-        id: 'branch-bitacora',
-        titulo: `6. Registro de Acciones y Auditoría (${bitacoraNodes.length})`,
-        descripcion: 'Trazabilidad cronológica detallada de cada cambio ejecutado por los usuarios',
-        icono: <GitBranch className="w-4 h-4 text-indigo-600" />,
-        color: 'indigo',
-        completados: bitacoraNodes.length,
-        total: bitacoraNodes.length,
-        nodos: bitacoraNodes
+        tipo: 'observacion',
+        observaciones: purchase.observaciones,
+        correlativo: 1
+      });
+    } else {
+      // Estado informativo si aún no hay observaciones
+      obsNodes.push({
+        id: 'obs-node-empty',
+        titulo: 'Hoja de Ruta del Expediente',
+        subtitulo: 'Sin observaciones registradas por el momento',
+        fecha: purchase.fechaRecepcion || purchase.fechaSolicitud,
+        responsable: purchase.creadoPor || 'Departamento de Compras',
+        estado: 'pendiente',
+        tipo: 'observacion',
+        observaciones: 'El expediente no cuenta con observaciones registradas en la hoja de ruta. Puede agregar nuevas observaciones con usuario, fecha y hora.'
       });
     }
+
+    const obsCompletados = obsNodes.filter(n => n.estado === 'completado').length;
+    list.push({
+      id: 'branch-observaciones',
+      titulo: 'Observaciones y Hoja de Ruta',
+      descripcion: 'Registro cronológico estructurado de la hoja de ruta (del más reciente al más antiguo)',
+      icono: <MessageSquare className="w-4 h-4 text-amber-600" />,
+      color: 'amber',
+      completados: obsCompletados,
+      total: obsNodes.length,
+      nodos: obsNodes
+    });
 
     return list;
   }, [purchase]);
 
-  // Nodos planos para la vista cronológica
+  // Nodos planos para la vista cronológica (del más reciente al más antiguo)
   const chronologicalNodes = useMemo(() => {
     const all: TreeNodeItem[] = [];
     branches.forEach(b => {
       b.nodos.forEach(n => {
-        all.push(n);
+        if (n.id !== 'obs-node-empty') {
+          all.push(n);
+        }
       });
     });
 
-    // Ordenar cronológicamente si tienen fecha
     return all.sort((a, b) => {
-      const dateA = a.fecha || '1970-01-01';
-      const dateB = b.fecha || '1970-01-01';
+      const dateA = (a.fecha || '1970-01-01') + (a.hora ? `T${a.hora}` : 'T00:00:00');
+      const dateB = (b.fecha || '1970-01-01') + (b.hora ? `T${b.hora}` : 'T00:00:00');
       return dateB.localeCompare(dateA);
     });
   }, [branches]);
 
-  // Filtrado de ramas y nodos
+  // Filtrado por búsqueda en las observaciones
   const filteredBranches = useMemo(() => {
     return branches.map(b => {
       let filteredNodes = b.nodos;
-
-      if (filterState === 'recorridos') {
-        filteredNodes = filteredNodes.filter(n => n.estado === 'completado' || n.estado === 'en_proceso' || n.estado === 'desierto');
-      } else if (filterState === 'completados') {
-        filteredNodes = filteredNodes.filter(n => n.estado === 'completado');
-      } else if (filterState === 'en_proceso') {
-        filteredNodes = filteredNodes.filter(n => n.estado === 'en_proceso');
-      } else if (filterState === 'pendientes') {
-        filteredNodes = filteredNodes.filter(n => n.estado === 'pendiente');
-      }
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -405,7 +225,8 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
           n.titulo.toLowerCase().includes(q) ||
           (n.subtitulo && n.subtitulo.toLowerCase().includes(q)) ||
           (n.observaciones && n.observaciones.toLowerCase().includes(q)) ||
-          (n.responsable && n.responsable.toLowerCase().includes(q))
+          (n.responsable && n.responsable.toLowerCase().includes(q)) ||
+          (n.fecha && n.fecha.includes(q))
         );
       }
 
@@ -413,25 +234,24 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
         ...b,
         nodos: filteredNodes
       };
-    }).filter(b => b.nodos.length > 0);
-  }, [branches, filterState, searchQuery]);
+    });
+  }, [branches, searchQuery]);
 
-  // Conteo global
-  const totalNodes = branches.reduce((acc, b) => acc + b.total, 0);
-  const totalCompleted = branches.reduce((acc, b) => acc + b.completados, 0);
-  const progressPercent = totalNodes > 0 ? Math.round((totalCompleted / totalNodes) * 100) : 0;
+  // Conteo global de observaciones
+  const totalObservaciones = (purchase.observacionesList?.length || (purchase.observaciones ? 1 : 0));
 
-  // Render de un nodo individual en el árbol
-  const renderNode = (node: TreeNodeItem, isLast: boolean, depth = 0) => {
+  // Render de un nodo individual en el árbol (Semáforo Verde para el último movimiento registrado)
+  const renderNode = (node: TreeNodeItem, isLast: boolean, isFirst: boolean = false) => {
     const isExpanded = Boolean(expandedNodes[node.id]);
+    const isLatestRealMovement = isFirst && node.id !== 'obs-node-empty';
 
     const stateConfig = {
       completado: {
-        badge: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-        dot: 'bg-emerald-500 ring-4 ring-emerald-100',
-        line: 'border-emerald-300',
-        text: 'Completado',
-        icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+        badge: 'bg-amber-100 text-amber-900 border-amber-300',
+        dot: 'bg-amber-500 ring-4 ring-amber-100',
+        line: 'border-slate-300',
+        text: 'Hoja de Ruta',
+        icon: <MessageSquare className="w-3.5 h-3.5 text-amber-600" />
       },
       en_proceso: {
         badge: 'bg-amber-100 text-amber-800 border-amber-300',
@@ -451,45 +271,62 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
         badge: 'bg-rose-100 text-rose-800 border-rose-300',
         dot: 'bg-rose-500 ring-4 ring-rose-100',
         line: 'border-rose-300',
-        text: 'No Adjudicado',
+        text: 'No Aplicado',
         icon: <Ban className="w-3.5 h-3.5 text-rose-600" />
       }
     }[node.estado];
 
     return (
       <div key={node.id} className="relative flex items-start group">
-        {/* Línea conectora vertical de rama */}
+        {/* Línea conectora vertical de rama del árbol */}
         {!isLast && (
           <div className="absolute left-[17px] top-7 bottom-0 w-0.5 bg-slate-200 group-hover:bg-slate-300 transition-colors" />
         )}
 
-        {/* Punto / Conector de Nodo */}
+        {/* Punto / Conector de Nodo (Semáforo de Estado: Verde brillante para el último movimiento registrado) */}
         <div className="relative z-10 flex items-center justify-center w-9 h-9 shrink-0 mr-3">
-          <div className={`w-3.5 h-3.5 rounded-full ${stateConfig.dot} transition-transform group-hover:scale-110 flex items-center justify-center`} />
+          {isLatestRealMovement ? (
+            <div 
+              className="w-4 h-4 rounded-full bg-emerald-500 ring-4 ring-emerald-200 shadow-md shadow-emerald-500/30 flex items-center justify-center animate-pulse transition-transform group-hover:scale-125"
+              title="Semáforo Verde: Último Movimiento Registrado"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-white block" />
+            </div>
+          ) : (
+            <div className={`w-3.5 h-3.5 rounded-full ${stateConfig.dot} transition-transform group-hover:scale-110 flex items-center justify-center`} />
+          )}
         </div>
 
         {/* Tarjeta del Nodo */}
         <div className="flex-1 pb-4 min-w-0">
           <div 
             onClick={() => toggleNodeDetail(node.id)}
-            className={`p-3 rounded-xl border transition-all cursor-pointer ${
-              node.estado === 'completado' 
-                ? 'bg-white border-slate-200 hover:border-emerald-300 hover:shadow-xs' 
-                : node.estado === 'en_proceso'
-                  ? 'bg-amber-50/40 border-amber-200 hover:border-amber-300'
+            className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+              isLatestRealMovement
+                ? 'bg-emerald-50/40 border-emerald-300 shadow-xs ring-1 ring-emerald-200/70 hover:border-emerald-400'
+                : node.estado === 'completado'
+                  ? 'bg-amber-50/30 border-amber-200/80 hover:border-amber-300 hover:shadow-xs'
                   : 'bg-slate-50/70 border-slate-200 hover:border-slate-300'
             }`}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="text-xs font-bold text-slate-900 leading-snug">
-                    {node.titulo}
+                  <h4 className="text-xs font-bold text-slate-900 leading-snug flex items-center gap-1.5">
+                    <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isLatestRealMovement ? 'text-emerald-600' : 'text-amber-600'}`} />
+                    <span>{node.titulo}</span>
                   </h4>
-                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${stateConfig.badge}`}>
-                    {stateConfig.icon}
-                    <span>{stateConfig.text}</span>
-                  </span>
+                  {isLatestRealMovement ? (
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-0.5 rounded-full border bg-emerald-100 text-emerald-900 border-emerald-400 shadow-2xs">
+                      <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                      <span>Semáforo Verde: Último Movimiento Registrado</span>
+                    </span>
+                  ) : (
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${stateConfig.badge}`}>
+                      {stateConfig.icon}
+                      <span>{stateConfig.text}</span>
+                    </span>
+                  )}
                 </div>
                 {node.subtitulo && (
                   <p className="text-[11px] text-slate-500 mt-0.5 font-medium">
@@ -501,8 +338,12 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
               {/* Fecha y botón de expandir */}
               <div className="flex items-center gap-2 shrink-0">
                 {node.fecha && (
-                  <span className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-md">
-                    <Calendar className="w-3 h-3 text-slate-400" />
+                  <span className={`text-[10px] font-semibold flex items-center gap-1 border px-2 py-0.5 rounded-md font-mono ${
+                    isLatestRealMovement 
+                      ? 'bg-white border-emerald-300 text-emerald-900 font-bold' 
+                      : 'bg-white border-slate-200 text-slate-600'
+                  }`}>
+                    <Calendar className={`w-3 h-3 ${isLatestRealMovement ? 'text-emerald-600' : 'text-amber-600'}`} />
                     {formatDate(node.fecha)} {node.hora ? `• ${node.hora}` : ''}
                   </span>
                 )}
@@ -525,23 +366,16 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
                   {node.rol && <span className="text-slate-400">({node.rol})</span>}
                 </span>
               )}
-              {node.documentoRef && (
-                <span className="flex items-center gap-1 text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-medium">
-                  <Paperclip className="w-3 h-3" />
-                  <span className="truncate max-w-[200px]">{node.documentoRef}</span>
-                </span>
-              )}
-              {node.ip && (
-                <span className="text-slate-400 font-mono text-[9px]">
-                  IP: {node.ip}
-                </span>
-              )}
             </div>
 
-            {/* Detalles expandibles */}
-            {isExpanded && node.observaciones && (
-              <div className="mt-2.5 pt-2.5 border-t border-dashed border-slate-200 text-xs text-slate-700 bg-slate-50 p-2.5 rounded-lg">
-                <p className="font-medium leading-relaxed">
+            {/* Contenido / Observaciones completas */}
+            {node.observaciones && (
+              <div className={`mt-2.5 pt-2.5 border-t border-dashed text-xs rounded-lg p-3 text-slate-800 shadow-2xs border ${
+                isLatestRealMovement 
+                  ? 'bg-white border-emerald-200/90' 
+                  : 'bg-white border-amber-200/80 border-amber-100'
+              }`}>
+                <p className="leading-relaxed whitespace-pre-wrap font-normal">
                   {node.observaciones}
                 </p>
               </div>
@@ -555,7 +389,7 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
   return (
     <div className="space-y-4">
       {/* Barra superior de Resumen del Árbol y Progreso */}
-      <div className="bg-gradient-to-r from-slate-900 to-blue-950 p-4 rounded-xl text-white shadow-md border border-slate-800">
+      <div className="bg-gradient-to-r from-slate-900 via-amber-950/80 to-slate-900 p-4 rounded-xl text-white shadow-md border border-slate-800">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-amber-400 shrink-0">
@@ -564,10 +398,10 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                  Árbol de Registro e Historial de Acciones
+                  Árbol de Registro: Observaciones y Hoja de Ruta
                 </h3>
                 <span className="text-[10px] bg-amber-500/20 border border-amber-400/40 text-amber-300 px-2 py-0.5 rounded-full font-bold">
-                  {purchase.nog ? `NOG: ${purchase.nog}` : 'Nuevo Registro'}
+                  {purchase.nog ? `NOG: ${purchase.nog}` : 'Sin NOG'}
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
@@ -576,36 +410,71 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
             </div>
           </div>
 
-          {/* Métrica de avance del árbol */}
+          {/* Métrica de observaciones en hoja de ruta */}
           <div className="flex items-center gap-3 self-end sm:self-auto">
             <div className="text-right">
               <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">
-                Avance del Expediente
+                Total en Hoja de Ruta
               </span>
               <span className="text-sm font-black text-amber-400">
-                {totalCompleted} de {totalNodes} hitos ({progressPercent}%)
+                {totalObservaciones} {totalObservaciones === 1 ? 'observación' : 'observaciones'}
               </span>
-            </div>
-            <div className="w-14 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
-              <div 
-                className="h-full bg-gradient-to-r from-amber-500 to-emerald-400 transition-all duration-500" 
-                style={{ width: `${progressPercent}%` }} 
-              />
+              <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[10px] text-emerald-300 font-bold">
+                  Semáforo Verde: Último Movimiento
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Controles del Árbol: Filtros, Búsqueda y Modos */}
+      {/* Formulario rápido para agregar nueva observación a la Hoja de Ruta si se habilita */}
+      {canAddObservation && onAddObservation && (
+        <form onSubmit={handleFormSubmitObservation} className="bg-amber-50/50 p-3.5 rounded-xl border border-amber-200 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <label htmlFor="tree-input-observacion" className="font-bold text-amber-900 flex items-center gap-1.5">
+              <Plus className="w-3.5 h-3.5 text-amber-700" />
+              <span>Agregar Observación a la Hoja de Ruta</span>
+            </label>
+            {currentUser && (
+              <span className="text-[10px] text-slate-500">
+                Como: <strong className="text-slate-800">{currentUser.nombreCompleto || currentUser.username}</strong>
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <textarea
+              id="tree-input-observacion"
+              rows={2}
+              value={nuevaObservacion}
+              onChange={(e) => setNuevaObservacion(e.target.value)}
+              placeholder="Escriba aquí la observación técnica, dictamen de soporte o nota para integrarla a la hoja de ruta..."
+              className="flex-1 p-2 text-xs border border-amber-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 text-slate-800"
+            />
+            <button
+              type="submit"
+              disabled={!nuevaObservacion.trim() || isSubmittingObs}
+              className="px-4 py-2 bg-amber-800 hover:bg-amber-900 disabled:opacity-50 text-white rounded-lg text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Guardar</span>
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Controles del Árbol: Búsqueda, Vista y Expansión */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
         
-        {/* Selector de modo y búsqueda */}
+        {/* Selector de búsqueda y vista */}
         <div className="flex items-center gap-2 flex-1">
-          <div className="relative flex-1 max-w-xs">
+          <div className="relative flex-1 max-w-sm">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Buscar acción, usuario, hito..."
+              placeholder="Buscar en observaciones y hoja de ruta..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-8 pr-2.5 py-1 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
@@ -616,18 +485,18 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
             <button
               type="button"
               onClick={() => setViewMode('jerarquico')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${
+              className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                 viewMode === 'jerarquico' 
                   ? 'bg-slate-900 text-white shadow-xs' 
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Por Fases
+              Por Secciones
             </button>
             <button
               type="button"
               onClick={() => setViewMode('cronologico')}
-              className={`px-2.5 py-1 rounded-md transition-colors ${
+              className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                 viewMode === 'cronologico' 
                   ? 'bg-slate-900 text-white shadow-xs' 
                   : 'text-slate-600 hover:text-slate-900'
@@ -638,61 +507,31 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
           </div>
         </div>
 
-        {/* Filtros de estado y botones expandir/colapsar */}
-        <div className="flex items-center gap-1.5 justify-end flex-wrap">
-          <div className="flex items-center gap-1 text-[11px]">
-            <button
-              type="button"
-              onClick={() => setFilterState('recorridos')}
-              className={`px-2 py-0.5 rounded font-bold transition-colors ${
-                filterState === 'recorridos' ? 'bg-amber-800 text-white' : 'text-amber-800 hover:bg-amber-100'
-              }`}
-              title="Ver únicamente los hitos y acciones transitados por esta ficha"
-            >
-              Ruta de esta Ficha
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterState('todos')}
-              className={`px-2 py-0.5 rounded font-bold transition-colors ${
-                filterState === 'todos' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              Todos ({totalNodes})
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterState('completados')}
-              className={`px-2 py-0.5 rounded font-bold transition-colors ${
-                filterState === 'completados' ? 'bg-emerald-700 text-white' : 'text-emerald-700 hover:bg-emerald-100'
-              }`}
-            >
-              Hechos ({totalCompleted})
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterState('en_proceso')}
-              className={`px-2 py-0.5 rounded font-bold transition-colors ${
-                filterState === 'en_proceso' ? 'bg-amber-600 text-white' : 'text-amber-700 hover:bg-amber-100'
-              }`}
-            >
-              En Proceso
-            </button>
-          </div>
+        {/* Indicador de orden y botones expandir/colapsar */}
+        <div className="flex items-center gap-2 justify-end flex-wrap">
+          <span className="text-[11px] font-bold text-emerald-900 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-md flex items-center gap-1.5 shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Semáforo verde = Último movimiento</span>
+          </span>
+
+          <span className="text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+            <ArrowDownUp className="w-3 h-3 text-amber-700" />
+            <span>Más reciente al más antiguo</span>
+          </span>
 
           <div className="h-4 w-px bg-slate-300 mx-1 hidden sm:block" />
 
           <button
             type="button"
             onClick={expandAll}
-            className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 px-2 py-0.5 hover:bg-slate-200 rounded"
+            className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 px-2 py-0.5 hover:bg-slate-200 rounded cursor-pointer"
           >
             Expandir todo
           </button>
           <button
             type="button"
             onClick={collapseAll}
-            className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 px-2 py-0.5 hover:bg-slate-200 rounded"
+            className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 px-2 py-0.5 hover:bg-slate-200 rounded cursor-pointer"
           >
             Colapsar todo
           </button>
@@ -702,9 +541,9 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
 
       {/* CUERPO DEL ÁRBOL */}
       {viewMode === 'jerarquico' ? (
-        /* VISTA JERÁRQUICA POR RAMAS INSTITUCIONALES */
+        /* VISTA POR SECCIONES: OBSERVACIONES Y HOJA DE RUTA */
         <div className="space-y-4">
-          {filteredBranches.map((branch, bIdx) => {
+          {filteredBranches.map((branch) => {
             const isCollapsed = Boolean(collapsedBranches[branch.id]);
 
             return (
@@ -725,7 +564,7 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
                       <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
                         <span>{branch.titulo}</span>
                         <span className="text-[10px] font-semibold text-slate-500 bg-white border border-slate-200 px-2 py-0.2 rounded-full">
-                          {branch.completados}/{branch.total}
+                          {branch.nodos.length} {branch.nodos.length === 1 ? 'observación' : 'observaciones'}
                         </span>
                       </h4>
                       <p className="text-[10px] text-slate-500">
@@ -735,12 +574,6 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <div className="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden hidden sm:block">
-                      <div 
-                        className="h-full bg-emerald-500" 
-                        style={{ width: `${(branch.completados / branch.total) * 100}%` }} 
-                      />
-                    </div>
                     {isCollapsed ? <ChevronRight className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                   </div>
                 </div>
@@ -749,7 +582,7 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
                 {!isCollapsed && (
                   <div className="p-4 sm:p-5 bg-white space-y-1">
                     {branch.nodos.map((node, nIdx) => 
-                      renderNode(node, nIdx === branch.nodos.length - 1)
+                      renderNode(node, nIdx === branch.nodos.length - 1, nIdx === 0)
                     )}
                   </div>
                 )}
@@ -758,15 +591,15 @@ export const PurchaseActionTree: React.FC<PurchaseActionTreeProps> = ({
           })}
         </div>
       ) : (
-        /* VISTA CRONOLÓGICA DIRECTA */
+        /* VISTA CRONOLÓGICA DIRECTA (MÁS RECIENTE AL MÁS ANTIGUO) */
         <div className="bg-white rounded-xl border border-slate-200 shadow-2xs p-4 sm:p-6 space-y-1">
           {chronologicalNodes.length > 0 ? (
             chronologicalNodes.map((node, idx) => 
-              renderNode(node, idx === chronologicalNodes.length - 1)
+              renderNode(node, idx === chronologicalNodes.length - 1, idx === 0)
             )
           ) : (
             <div className="text-center py-8 text-slate-400 text-xs font-medium">
-              No se encontraron acciones registradas que coincidan con los filtros.
+              No se encontraron registros de observaciones en la hoja de ruta que coincidan con los filtros.
             </div>
           )}
         </div>
