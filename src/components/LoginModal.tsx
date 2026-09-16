@@ -68,9 +68,9 @@ export const LoginModal: React.FC = () => {
 
           <div className="flex justify-center mb-3">
             <img 
-              src="/organismo_judicial_badge.svg" 
+              src="/organismo_judicial_logo_white.svg" 
               alt="Organismo Judicial de Guatemala" 
-              className="w-16 h-16 object-contain rounded-2xl shadow-md border border-slate-700/80 bg-slate-950/40 p-1"
+              className="w-16 h-16 object-contain drop-shadow-lg"
             />
           </div>
           

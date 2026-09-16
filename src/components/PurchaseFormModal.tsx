@@ -556,9 +556,9 @@ export const PurchaseFormModal: React.FC = () => {
         <div className="bg-slate-900 p-4 text-white flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center space-x-3">
             <img 
-              src="/organismo_judicial_badge.svg" 
+              src="/organismo_judicial_logo_white.svg" 
               alt="Organismo Judicial de Guatemala" 
-              className="w-10 h-10 object-contain rounded-xl shadow-xs border border-slate-700/80 bg-slate-950/40 p-0.5 shrink-0"
+              className="w-10 h-10 object-contain drop-shadow-md shrink-0"
             />
             <div>
               <h2 className="text-sm sm:text-base font-bold text-white">
@@ -686,9 +686,9 @@ export const PurchaseFormModal: React.FC = () => {
           <div className="bg-slate-900 text-white p-3.5 rounded-xl border border-slate-800 shadow-xs flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img 
-                src="/organismo_judicial_badge.svg" 
+                src="/organismo_judicial_logo_white.svg" 
                 alt="Organismo Judicial de Guatemala" 
-                className="w-12 h-12 object-contain rounded-xl shadow-xs border border-slate-700/80 bg-slate-950/40 p-0.5 shrink-0"
+                className="w-12 h-12 object-contain drop-shadow-md shrink-0"
               />
               <div>
                 <h3 className="text-xs font-black tracking-wider uppercase text-white font-['Cinzel',serif]">

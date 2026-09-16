@@ -24,11 +24,13 @@ export const OJLogo: React.FC<OJLogoProps> = ({
   overrideLogo
 }) => {
   const appContext = useApp();
-  const officialEmblemUrl = '/organismo_judicial_badge.svg';
+  // On dark/blue background (lightMode === false), use the pure white emblem so it stands out with high contrast
+  // On light/white background (lightMode === true), use the dark blue emblem for readability
+  const defaultEmblemUrl = lightMode ? '/organismo_judicial_logo.svg' : '/organismo_judicial_logo_white.svg';
   
   const activeLogo = overrideLogo || appContext?.customLogo || {
     type: 'custom_image',
-    imageUrl: officialEmblemUrl,
+    imageUrl: defaultEmblemUrl,
     presetId: 'oj_vector',
     title: 'Organismo Judicial',
     subtitle: 'Departamento de Compras'
@@ -92,7 +94,16 @@ export const OJLogo: React.FC<OJLogoProps> = ({
     }
 
     // 3. Emblema Oficial del Organismo Judicial de Guatemala
-    const effectiveImageUrl = activeLogo.imageUrl || officialEmblemUrl;
+    // En fondos azules u oscuros (!lightMode), debe ser BLANCO para que se distinga nítidamente.
+    // En fondos blancos o claros (lightMode), debe ser el oficial AZUL MARINO.
+    let effectiveImageUrl = activeLogo.imageUrl || defaultEmblemUrl;
+    if (
+      !activeLogo.imageUrl ||
+      activeLogo.imageUrl.includes('organismo_judicial') ||
+      activeLogo.imageUrl.includes('organismo_judicial_badge')
+    ) {
+      effectiveImageUrl = lightMode ? '/organismo_judicial_logo.svg' : '/organismo_judicial_logo_white.svg';
+    }
 
     return (
       <div 
@@ -102,7 +113,11 @@ export const OJLogo: React.FC<OJLogoProps> = ({
         <img 
           src={effectiveImageUrl} 
           alt="Emblema Oficial Organismo Judicial de Guatemala" 
-          className="w-full h-full object-contain rounded-xl shadow-xs"
+          className={`w-full h-full object-contain ${
+            lightMode 
+              ? 'drop-shadow-xs' 
+              : 'filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]'
+          }`}
           referrerPolicy="no-referrer"
         />
       </div>

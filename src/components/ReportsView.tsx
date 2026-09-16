@@ -779,11 +779,13 @@ export const ReportsView: React.FC = () => {
       {/* 1. Encabezado del Módulo de Reportes de Control */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4 print:hidden">
         <div className="flex items-center gap-3">
-          <img 
-            src="/organismo_judicial_badge.svg" 
-            alt="Organismo Judicial de Guatemala" 
-            className="w-12 h-12 object-contain rounded-xl shadow-xs border border-slate-700/80 bg-slate-900 p-0.5 shrink-0" 
-          />
+          <div className="w-12 h-12 rounded-xl bg-[#0f2042] p-1.5 flex items-center justify-center shadow-xs border border-slate-700/80 shrink-0">
+            <img 
+              src="/organismo_judicial_logo_white.svg" 
+              alt="Organismo Judicial de Guatemala" 
+              className="w-full h-full object-contain drop-shadow-xs" 
+            />
+          </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />

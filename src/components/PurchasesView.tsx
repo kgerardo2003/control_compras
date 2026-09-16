@@ -310,11 +310,13 @@ export const PurchasesView: React.FC = () => {
       {/* Encabezado del Módulo de Compras (Professional Polish) */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <img 
-            src="/organismo_judicial_badge.svg" 
-            alt="Organismo Judicial de Guatemala" 
-            className="w-11 h-11 object-contain rounded-xl shadow-xs border border-slate-700/80 bg-slate-900 p-0.5 shrink-0" 
-          />
+          <div className="w-11 h-11 rounded-xl bg-[#0f2042] p-1.5 flex items-center justify-center shadow-xs border border-slate-700/80 shrink-0">
+            <img 
+              src="/organismo_judicial_logo_white.svg" 
+              alt="Organismo Judicial de Guatemala" 
+              className="w-full h-full object-contain drop-shadow-xs" 
+            />
+          </div>
           <div>
             <h2 className="text-base font-bold text-slate-800">
               Control de Adquisiciones y Eventos NOG
