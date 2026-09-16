@@ -868,17 +868,7 @@ export const PurchaseFormModal: React.FC = () => {
                   {showDocumentPreview && f56Documento && (
                     <DocumentPreview
                       document={f56Documento}
-                      purchase={{
-                        f56e,
-                        f56,
-                        descripcion,
-                        monto: Number(monto) || 0,
-                        areaSolicitante,
-                        dependenciaSolicitante,
-                        proveedorAdjudicado,
-                        fechaDictamenGIT,
-                        fechaElaboracionOficioGIT
-                      }}
+                      purchase={livePurchasePreview}
                       title="Vista Previa de Documento F56-e"
                       onClose={() => setShowDocumentPreview(false)}
                     />
