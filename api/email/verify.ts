@@ -1,19 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import nodemailer from 'nodemailer';
-
-function normalizeEmail(email?: string): string {
-  if (!email) return '';
-  let cleaned = String(email).trim();
-  if (cleaned.toLowerCase().endsWith('@gmail') || cleaned.toLowerCase().endsWith('@gmail.')) {
-    cleaned = cleaned.replace(/@gmail\.?$/i, '@gmail.com');
-  }
-  return cleaned;
-}
-
-function normalizeAppPassword(pass?: string): string {
-  if (!pass) return '';
-  return String(pass).replace(/["']/g, '').trim();
-}
+import { verifyEmailCredentials } from '../_emailService';
 
 function setCorsHeaders(res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -43,39 +29,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     body = body || {};
 
-    const user = normalizeEmail(body.userEmail || process.env.GMAIL_USER || 'kgerardo2003@gmail.com');
-    const pass = normalizeAppPassword(body.appPassword || process.env.GMAIL_APP_PASSWORD || 'pwwv bgmb wgak bvdn');
-    const host = body.smtpHost || process.env.SMTP_HOST || 'smtp.gmail.com';
-    const port = Number(body.smtpPort || process.env.SMTP_PORT || 465);
-    const secure = body.secure !== undefined ? Boolean(body.secure) : (port === 465);
-
-    const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: { user, pass },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
+    const result = await verifyEmailCredentials({
+      userEmail: body.userEmail,
+      appPassword: body.appPassword,
+      smtpHost: body.smtpHost,
+      smtpPort: body.smtpPort,
+      secure: body.secure
     });
 
-    await transporter.verify();
-
-    return res.status(200).json({
-      success: true,
-      message: `Credenciales de Gmail verificadas con éxito en ${host}:${port} para la cuenta ${user} en Vercel.`,
-      account: user
-    });
+    return res.status(200).json(result);
   } catch (error: any) {
-    console.error('Error verificando credenciales en Vercel:', error);
-    let userMsg = error?.message || 'Error de conexión con los servidores de Google Gmail.';
-    if (error?.code === 'EAUTH') {
-      userMsg = 'Fallo de autenticación con Gmail en Vercel. Verifique que la Contraseña de Aplicación de 16 caracteres sea correcta.';
-    }
-    return res.status(400).json({
+    console.error('[api/email/verify] Error inesperado:', error);
+    return res.status(200).json({
       success: false,
-      message: userMsg,
-      code: error?.code
+      message: error?.message || 'Error al conectar con el servidor SMTP de Google.'
     });
   }
 }

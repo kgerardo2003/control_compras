@@ -84,7 +84,7 @@ export const EmailConfigView: React.FC = () => {
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Quitar comillas y caracteres no deseados si se pegan accidentalmente
+    // Quitar comillas si se pegan accidentalmente
     const cleanPass = e.target.value.replace(/["']/g, '');
     setFormData(prev => ({ ...prev, appPassword: cleanPass }));
   };
@@ -208,7 +208,7 @@ export const EmailConfigView: React.FC = () => {
   const envSample = `# Variables de Entorno para Vercel y GitHub
 # Configura estas variables en: Vercel Dashboard -> Project Settings -> Environment Variables
 GMAIL_USER="${formData.userEmail || 'kgerardo2003@gmail.com'}"
-GMAIL_APP_PASSWORD="${formData.appPassword ? formData.appPassword : 'pwwv bgmb wgak bvdn'}"
+GMAIL_APP_PASSWORD="${(formData.appPassword ? formData.appPassword.replace(/\s+/g, '') : 'pwwvbgmbwgakbvdn')}"
 SMTP_HOST="${formData.smtpHost || 'smtp.gmail.com'}"
 SMTP_PORT="${formData.smtpPort || 465}"
 SMTP_SECURE="${formData.secure ? 'true' : 'false'}"

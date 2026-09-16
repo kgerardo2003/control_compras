@@ -25,8 +25,8 @@ function normalizeEmail(email?: string): string {
 // Helper para limpiar la contraseña de aplicación de Google
 function normalizeAppPassword(pass?: string): string {
   if (!pass) return '';
-  // Quitar comillas accidentales, espacios redundantes en los bordes
-  return pass.replace(/["']/g, '').trim();
+  // IMPORTANTE: Google muestra las claves con espacios (4x4). SMTP requiere los 16 caracteres sin espacios.
+  return String(pass).replace(/\s+/g, '').replace(/["']/g, '').trim();
 }
 
 // Helper para crear el transporte de Nodemailer

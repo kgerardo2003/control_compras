@@ -1,22 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import nodemailer from 'nodemailer';
-import { OJ_LOGO_CID, OJ_LOGO_PNG_BASE64 } from './_logo';
+import { sendEmailWithSmartFallback } from './_emailService';
 
-function normalizeEmail(email?: string): string {
-  if (!email) return '';
-  let cleaned = String(email).trim();
-  if (cleaned.toLowerCase().endsWith('@gmail') || cleaned.toLowerCase().endsWith('@gmail.')) {
-    cleaned = cleaned.replace(/@gmail\.?$/i, '@gmail.com');
-  }
-  return cleaned;
-}
-
-function normalizeAppPassword(pass?: string): string {
-  if (!pass) return '';
-  return String(pass).replace(/["']/g, '').trim();
-}
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+function setCorsHeaders(res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -24,6 +9,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     'Access-Control-Allow-Headers',
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setCorsHeaders(res);
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -44,77 +33,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     body = body || {};
 
-    const { to, destinatarios, subject, asunto, html, htmlContenido, text } = body;
-    const targets = to || destinatarios;
-    let recipientsList: string[] = [];
+    const targets = body.to || body.destinatarios || body.recipientEmails;
+    const subject = body.subject || body.asunto || '[NOTIFICACIÓN] Sistema de Compras - GIT OJ';
+    const html = body.html || body.htmlContenido;
+    const text = body.text;
+    const senderName = body.senderName;
 
-    if (Array.isArray(targets)) {
-      recipientsList = targets.map(normalizeEmail).filter(Boolean);
-    } else if (typeof targets === 'string') {
-      recipientsList = targets.split(',').map(normalizeEmail).filter(Boolean);
-    }
-
-    const user = normalizeEmail(body.userEmail || process.env.GMAIL_USER || 'kgerardo2003@gmail.com');
-    const pass = normalizeAppPassword(body.appPassword || process.env.GMAIL_APP_PASSWORD || 'pwwv bgmb wgak bvdn');
-    const host = body.smtpHost || process.env.SMTP_HOST || 'smtp.gmail.com';
-    const port = Number(body.smtpPort || process.env.SMTP_PORT || 465);
-    const secure = body.secure !== undefined ? Boolean(body.secure) : (port === 465);
-
-    const transportConfig: any = (host === 'smtp.gmail.com' || user.endsWith('@gmail.com'))
-      ? {
-          service: 'gmail',
-          auth: { user, pass },
-          connectionTimeout: 6000,
-          greetingTimeout: 6000,
-          socketTimeout: 7500,
-        }
-      : {
-          host,
-          port,
-          secure,
-          auth: { user, pass },
-          connectionTimeout: 6000,
-          greetingTimeout: 6000,
-          socketTimeout: 7500,
-        };
-
-    const transporter = nodemailer.createTransport(transportConfig);
-
-    const finalHtml = html || htmlContenido || `<p>${text || 'Notificación oficial de compras.'}</p>`;
-    const attachments = [];
-    if (OJ_LOGO_PNG_BASE64 && (finalHtml.includes(`cid:${OJ_LOGO_CID}`) || finalHtml.includes('organismo_judicial_logo') || finalHtml.includes('ORGANISMO JUDICIAL'))) {
-      attachments.push({
-        filename: 'organismo_judicial_logo.png',
-        content: Buffer.from(OJ_LOGO_PNG_BASE64, 'base64'),
-        cid: OJ_LOGO_CID,
-        contentType: 'image/png',
-        contentDisposition: 'inline'
-      });
-    }
-
-    const sendMailPromise = transporter.sendMail({
-      from: `"Departamento de Compras - OJ" <${user}>`,
-      to: recipientsList.length > 0 ? recipientsList.join(', ') : user,
-      subject: subject || asunto || '[OJ] Notificación de Compra',
-      text: text || 'Notificación oficial de compras.',
-      html: finalHtml,
-      attachments
+    const result = await sendEmailWithSmartFallback({
+      userEmail: body.userEmail,
+      appPassword: body.appPassword,
+      smtpHost: body.smtpHost,
+      smtpPort: body.smtpPort,
+      secure: body.secure,
+      senderName,
+      to: targets,
+      subject,
+      text,
+      html,
+      resendApiKey: body.resendApiKey
     });
 
-    const info = await Promise.race([
-      sendMailPromise,
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Tiempo de espera agotado al conectar con el servidor SMTP de Gmail (8s).')), 8000)
-      )
-    ]);
-
-    return res.status(200).json({ success: true, messageId: info.messageId, user });
+    return res.status(200).json(result);
   } catch (error: any) {
-    console.error('Error en send-email:', error);
-    let userMsg = error?.message || 'Error enviando correo';
-    if (error?.code === 'EAUTH' || userMsg.includes('535') || userMsg.includes('BadCredentials') || userMsg.includes('Username and Password not accepted')) {
-      userMsg = 'Fallo de autenticación con Gmail (535): Verifique la Contraseña de Aplicación de 16 caracteres de Google.';
-    }
-    return res.status(200).json({ success: false, message: userMsg, code: error?.code });
+    console.error('[api/send-email] Error inesperado:', error);
+    return res.status(200).json({
+      success: false,
+      message: error?.message || 'Error inesperado al despachar correo.'
+    });
   }
 }

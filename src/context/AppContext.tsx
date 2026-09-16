@@ -939,24 +939,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ): Promise<{ success: boolean; message: string }> => {
     const active = { ...gmailConfig, ...overrideConfig };
     
-    // Normalizar correo y contraseña
-    if (active.userEmail && (active.userEmail.endsWith('@gmail') || active.userEmail.endsWith('@gmail.'))) {
-      active.userEmail = active.userEmail.replace(/@gmail\.?$/, '@gmail.com');
+    // Normalizar correo y contraseña quitando comillas y espacios de Google
+    let effectiveEmail = (active.userEmail || '').trim();
+    if (effectiveEmail.endsWith('@gmail') || effectiveEmail.endsWith('@gmail.')) {
+      effectiveEmail = effectiveEmail.replace(/@gmail\.?$/, '@gmail.com');
     }
-    if (active.appPassword) {
-      active.appPassword = active.appPassword.replace(/["']/g, '').trim();
-    }
+    const effectivePassword = (active.appPassword || '').replace(/\s+/g, '').replace(/["']/g, '').trim();
 
-    if (!active.userEmail || !active.userEmail.includes('@')) {
+    if (!effectiveEmail || !effectiveEmail.includes('@')) {
       return { 
         success: false, 
         message: 'La cuenta de correo remitente de Gmail no es válida. Verifique que incluya "@gmail.com".' 
       };
     }
-    if (!active.appPassword || active.appPassword.trim().length < 8) {
+    if (!effectivePassword || effectivePassword.length < 8) {
       return { 
         success: false, 
-        message: 'Debe ingresar una Contraseña de Aplicación de Google válida (16 caracteres).' 
+        message: 'Debe ingresar una Contraseña de Aplicación de Google válida (16 caracteres alfanuméricos).' 
       };
     }
 
@@ -965,20 +964,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recipient = recipient.replace(/@gmail\.?$/, '@gmail.com');
     }
 
+    const payload = {
+      userEmail: effectiveEmail,
+      appPassword: effectivePassword,
+      smtpHost: active.smtpHost || 'smtp.gmail.com',
+      smtpPort: active.smtpPort || 465,
+      secure: active.secure !== undefined ? active.secure : true,
+      senderName: active.senderName || 'Sistema de Control de Compras - GIT OJ',
+      testRecipient: recipient,
+    };
+
     try {
-      const res = await fetch('/api/email/test', {
+      let res = await fetch('/api/email/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userEmail: active.userEmail,
-          appPassword: active.appPassword,
-          smtpHost: active.smtpHost,
-          smtpPort: active.smtpPort,
-          secure: active.secure,
-          senderName: active.senderName,
-          testRecipient: recipient,
-        }),
+        body: JSON.stringify(payload),
       });
+
+      // Si /api/email/test falla (404 o 500 en Vercel), intentar con /api/send-email o /api/email/send
+      if (!res.ok) {
+        try {
+          const fallbackRes = await fetch('/api/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...payload,
+              to: recipient,
+              subject: '[PRUEBA DE CONEXIÓN] Sistema de Compras - GIT OJ',
+              text: `Prueba de envío de correo exitosa para la cuenta ${effectiveEmail}.`
+            }),
+          });
+          if (fallbackRes.ok) {
+            res = fallbackRes;
+          }
+        } catch {
+          // Ignorar error de fallback
+        }
+      }
 
       const rawText = await res.text();
       let data: any = null;
@@ -991,6 +1013,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (res.ok && data?.success) {
         const updated: GmailConfig = {
           ...active,
+          userEmail: effectiveEmail,
+          appPassword: effectivePassword,
           lastTestDate: new Date().toISOString(),
           lastTestStatus: 'success',
           lastTestError: undefined,
@@ -999,24 +1023,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         localStorage.setItem(STORAGE_KEYS.GMAIL, JSON.stringify(updated));
         return { 
           success: true, 
-          message: data.message || `Prueba de conexión con Gmail exitosa. Se ha despachado el correo de prueba a ${recipient}.` 
+          message: data.message || `Prueba de conexión con Gmail exitosa. Se ha despachado el correo a ${recipient}.` 
         };
       } else {
         let errorMsg = data?.message;
         if (!errorMsg) {
-          if (res.status === 405) {
-            errorMsg = 'Error HTTP 405 (Método no permitido). Verifique que la función /api/email/test esté disponible en Vercel.';
+          if (rawText && rawText.includes('FUNCTION_INVOCATION_FAILED')) {
+            errorMsg = 'Error en función serverless de Vercel (500). Verifique que en Vercel Dashboard -> Settings -> Environment Variables estén configuradas GMAIL_USER y GMAIL_APP_PASSWORD (16 caracteres sin espacios).';
+          } else if (res.status === 405) {
+            errorMsg = 'Error HTTP 405 (Método no permitido). Verifique que el endpoint /api/email/test acepte peticiones POST.';
           } else if (res.status === 404) {
             errorMsg = 'Error HTTP 404: El endpoint /api/email/test no fue encontrado en el servidor.';
           } else if (rawText && (rawText.includes('<!DOCTYPE') || rawText.includes('<html'))) {
-            errorMsg = `El servidor devolvió una página HTML en lugar de JSON (HTTP ${res.status}). En Vercel verifique que la carpeta /api esté en su repositorio de GitHub.`;
+            errorMsg = `El servidor devolvió HTML en lugar de JSON (HTTP ${res.status}). Verifique la carpeta /api en el repositorio.`;
           } else {
-            errorMsg = `Error del servidor de correo (${res.status}): ${rawText ? rawText.slice(0, 150) : 'Sin respuesta'}`;
+            errorMsg = `Error del servidor de correo (${res.status}): ${rawText ? rawText.slice(0, 180) : 'Sin respuesta'}`;
           }
         }
 
         const updated: GmailConfig = {
           ...active,
+          userEmail: effectiveEmail,
+          appPassword: effectivePassword,
           lastTestDate: new Date().toISOString(),
           lastTestStatus: 'error',
           lastTestError: errorMsg,
@@ -1042,50 +1070,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: 'No hay destinatarios de correo configurados.' };
     }
     
-    // Normalizar credenciales con fallback seguro
-    const userEmail = (gmailConfig.userEmail && gmailConfig.userEmail.trim()) || 'kgerardo2003@gmail.com';
-    const appPassword = (gmailConfig.appPassword && gmailConfig.appPassword.trim()) || 'pwwv bgmb wgak bvdn';
+    // Normalizar credenciales quitando espacios
+    let userEmail = (gmailConfig.userEmail && gmailConfig.userEmail.trim()) || 'kgerardo2003@gmail.com';
+    if (userEmail.endsWith('@gmail') || userEmail.endsWith('@gmail.')) {
+      userEmail = userEmail.replace(/@gmail\.?$/, '@gmail.com');
+    }
+    const appPassword = (gmailConfig.appPassword && gmailConfig.appPassword.replace(/\s+/g, '').replace(/["']/g, '').trim()) || 'pwwvbgmbwgakbvdn';
 
     if (!userEmail || !appPassword) {
       return { success: false, message: 'Credenciales de Gmail incompletas.' };
     }
 
+    const emailPayload = {
+      userEmail,
+      appPassword,
+      smtpHost: gmailConfig.smtpHost || 'smtp.gmail.com',
+      smtpPort: gmailConfig.smtpPort || 465,
+      secure: gmailConfig.secure !== undefined ? gmailConfig.secure : true,
+      senderName: gmailConfig.senderName || 'Departamento de Compras - OJ',
+      to: recipients,
+      subject: params.subject,
+      html: params.html,
+      text: params.text,
+    };
+
     try {
       let res = await fetch('/api/email/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userEmail,
-          appPassword,
-          smtpHost: gmailConfig.smtpHost || 'smtp.gmail.com',
-          smtpPort: gmailConfig.smtpPort || 465,
-          secure: gmailConfig.secure !== undefined ? gmailConfig.secure : true,
-          senderName: gmailConfig.senderName || 'Departamento de Compras - OJ',
-          to: recipients,
-          subject: params.subject,
-          html: params.html,
-          text: params.text,
-        }),
+        body: JSON.stringify(emailPayload),
       });
 
-      // Si /api/email/send retorna 404, intentar con endpoint alterno /api/send-email
-      if (!res.ok && res.status === 404) {
-        res = await fetch('/api/send-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userEmail,
-            appPassword,
-            smtpHost: gmailConfig.smtpHost || 'smtp.gmail.com',
-            smtpPort: gmailConfig.smtpPort || 465,
-            secure: gmailConfig.secure !== undefined ? gmailConfig.secure : true,
-            senderName: gmailConfig.senderName || 'Departamento de Compras - OJ',
-            to: recipients,
-            subject: params.subject,
-            html: params.html,
-            text: params.text,
-          }),
-        });
+      // Si /api/email/send retorna error (404, 500), intentar con /api/send-email
+      if (!res.ok) {
+        try {
+          const fallbackRes = await fetch('/api/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(emailPayload),
+          });
+          if (fallbackRes.ok) {
+            res = fallbackRes;
+          }
+        } catch {
+          // Mantener res original
+        }
       }
 
       const rawText = await res.text();
@@ -1095,12 +1124,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch {
         data = null;
       }
+
+      let errorExplanation = data?.message;
+      if (!res.ok && !errorExplanation) {
+        if (rawText && rawText.includes('FUNCTION_INVOCATION_FAILED')) {
+          errorExplanation = 'Error en función serverless de Vercel (500). Verifique variables GMAIL_USER y GMAIL_APP_PASSWORD en Vercel.';
+        } else {
+          errorExplanation = `Error en servidor (${res.status}): ${rawText.slice(0, 150)}`;
+        }
+      }
+
       return { 
         success: res.ok && Boolean(data?.success), 
-        message: data?.message || (res.ok ? 'Notificación enviada' : `Error en servidor (${res.status}): ${rawText.slice(0, 150)}`) 
+        message: data?.message || (res.ok ? 'Notificación enviada exitosamente.' : errorExplanation || 'Fallo de entrega') 
       };
     } catch (err: any) {
-      return { success: false, message: err?.message || 'Error de conexión' };
+      return { success: false, message: err?.message || 'Error de conexión con el servicio de correo.' };
     }
   }, [gmailConfig]);
 
