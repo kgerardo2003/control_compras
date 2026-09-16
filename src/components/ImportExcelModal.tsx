@@ -432,9 +432,11 @@ export const ImportExcelModal: React.FC = () => {
         {/* Encabezado Institucional del Modal */}
         <div className="bg-[#0f2744] text-white px-6 py-4 flex items-center justify-between border-b-2 border-amber-500 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/20 text-emerald-300 rounded-xl border border-emerald-500/30">
-              <FileSpreadsheet className="w-6 h-6" />
-            </div>
+            <img 
+              src="/organismo_judicial_badge.svg" 
+              alt="Organismo Judicial de Guatemala" 
+              className="w-10 h-10 object-contain rounded-xl shadow-xs border border-slate-700/80 bg-slate-950/40 p-0.5 shrink-0" 
+            />
             <div>
               <h3 className="font-bold text-lg leading-tight flex items-center gap-2">
                 Importar Adquisiciones desde Excel / CSV
@@ -443,7 +445,7 @@ export const ImportExcelModal: React.FC = () => {
                 </span>
               </h3>
               <p className="text-xs text-slate-300">
-                Carga masiva de expedientes para el Departamento de Compras
+                Organismo Judicial de Guatemala • Carga masiva de expedientes del Departamento de Compras
               </p>
             </div>
           </div>

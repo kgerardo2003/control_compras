@@ -555,15 +555,17 @@ export const PurchaseFormModal: React.FC = () => {
         {/* Cabecera del Modal (Professional Polish) */}
         <div className="bg-slate-900 p-4 text-white flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-amber-500 rounded flex items-center justify-center text-slate-900 font-bold text-xs">
-              OJ
-            </div>
+            <img 
+              src="/organismo_judicial_badge.svg" 
+              alt="Organismo Judicial de Guatemala" 
+              className="w-10 h-10 object-contain rounded-xl shadow-xs border border-slate-700/80 bg-slate-950/40 p-0.5 shrink-0"
+            />
             <div>
               <h2 className="text-sm sm:text-base font-bold text-white">
                 {purchaseToEdit ? 'Modificar Registro de Adquisición' : 'Registrar Nueva Adquisición'}
               </h2>
               <p className="text-[11px] text-slate-400">
-                Departamento de Compras • Formulario Oficial F56-e
+                Organismo Judicial de Guatemala • Departamento de Compras • Formulario F56-e
               </p>
             </div>
           </div>
@@ -680,6 +682,32 @@ export const PurchaseFormModal: React.FC = () => {
         ) : (
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           
+          {/* Membrete Institucional Oficial del Organismo Judicial */}
+          <div className="bg-slate-900 text-white p-3.5 rounded-xl border border-slate-800 shadow-xs flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img 
+                src="/organismo_judicial_badge.svg" 
+                alt="Organismo Judicial de Guatemala" 
+                className="w-12 h-12 object-contain rounded-xl shadow-xs border border-slate-700/80 bg-slate-950/40 p-0.5 shrink-0"
+              />
+              <div>
+                <h3 className="text-xs font-black tracking-wider uppercase text-white font-['Cinzel',serif]">
+                  ORGANISMO JUDICIAL DE GUATEMALA
+                </h3>
+                <p className="text-[11px] font-bold text-amber-400">
+                  Departamento de Compras • Ficha Oficial F56-e
+                </p>
+                <p className="text-[10px] text-slate-300">
+                  Sistema Oficial de Control, Fiscalización y Hoja de Ruta de Compras
+                </p>
+              </div>
+            </div>
+            <div className="text-right hidden sm:block border-l border-slate-700/80 pl-3">
+              <span className="text-[9px] uppercase font-bold text-amber-400 block tracking-wider">Estado de Expediente</span>
+              <span className="text-xs font-mono font-bold text-white block">{estatusEvento}</span>
+            </div>
+          </div>
+
           {/* SECCIÓN 1: Identificación del Evento */}
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-200 pb-2">

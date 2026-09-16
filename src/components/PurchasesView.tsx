@@ -309,13 +309,20 @@ export const PurchasesView: React.FC = () => {
       
       {/* Encabezado del Módulo de Compras (Professional Polish) */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h2 className="text-base font-bold text-slate-800">
-            Control de Adquisiciones y Eventos NOG
-          </h2>
-          <p className="text-xs text-slate-500">
-            Mantenimiento y trazabilidad de compras para la Gerencia de Informática
-          </p>
+        <div className="flex items-center gap-3">
+          <img 
+            src="/organismo_judicial_badge.svg" 
+            alt="Organismo Judicial de Guatemala" 
+            className="w-11 h-11 object-contain rounded-xl shadow-xs border border-slate-700/80 bg-slate-900 p-0.5 shrink-0" 
+          />
+          <div>
+            <h2 className="text-base font-bold text-slate-800">
+              Control de Adquisiciones y Eventos NOG
+            </h2>
+            <p className="text-xs text-slate-500">
+              Organismo Judicial de Guatemala • Departamento de Compras • F56-e
+            </p>
+          </div>
         </div>
 
         {/* Botones de Acción */}

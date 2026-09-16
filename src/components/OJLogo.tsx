@@ -24,7 +24,7 @@ export const OJLogo: React.FC<OJLogoProps> = ({
   overrideLogo
 }) => {
   const appContext = useApp();
-  const officialEmblemUrl = officialOjLogoAsset || '/organismo_judicial_logo.svg';
+  const officialEmblemUrl = '/organismo_judicial_badge.svg';
   
   const activeLogo = overrideLogo || appContext?.customLogo || {
     type: 'custom_image',
@@ -91,22 +91,18 @@ export const OJLogo: React.FC<OJLogoProps> = ({
       );
     }
 
-    // 3. Emblema Oficial del Organismo Judicial de Guatemala (Logotipo Oficial de Wikimedia/Guatemala o personalizado)
+    // 3. Emblema Oficial del Organismo Judicial de Guatemala
     const effectiveImageUrl = activeLogo.imageUrl || officialEmblemUrl;
 
     return (
       <div 
-        className={`${iconSizes[size]} relative rounded-2xl flex items-center justify-center p-1.5 transition-transform duration-200 hover:scale-105 flex-shrink-0 select-none overflow-hidden ${
-          lightMode 
-            ? 'bg-transparent' 
-            : 'bg-white shadow-md border border-slate-200/80 ring-1 ring-slate-100'
-        }`}
+        className={`${iconSizes[size]} relative flex items-center justify-center transition-transform duration-200 hover:scale-105 flex-shrink-0 select-none`}
         title="Emblema Oficial - Organismo Judicial de Guatemala"
       >
         <img 
           src={effectiveImageUrl} 
           alt="Emblema Oficial Organismo Judicial de Guatemala" 
-          className="w-full h-full object-contain drop-shadow-xs"
+          className="w-full h-full object-contain rounded-xl shadow-xs"
           referrerPolicy="no-referrer"
         />
       </div>

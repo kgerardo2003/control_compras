@@ -119,9 +119,11 @@ export const ExportPdfModal: React.FC<ExportPdfModalProps> = ({
           <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
             <div className="bg-slate-900 p-3.5 text-white flex items-center justify-between border-b-2 border-amber-500">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-white/10 p-1 flex items-center justify-center border border-white/20">
-                  <Building2 className="w-6 h-6 text-amber-400" />
-                </div>
+                <img 
+                  src="/organismo_judicial_badge.svg" 
+                  alt="Organismo Judicial de Guatemala" 
+                  className="w-10 h-10 object-contain rounded-xl shadow-xs border border-slate-700/80 bg-slate-950/40 p-0.5 shrink-0" 
+                />
                 <div>
                   <h4 className="text-xs font-black tracking-wide text-white uppercase">Organismo Judicial de Guatemala</h4>
                   <p className="text-[10px] font-bold text-amber-400">Departamento de Compras</p>

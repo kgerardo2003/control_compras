@@ -67,9 +67,11 @@ export const LoginModal: React.FC = () => {
           </button>
 
           <div className="flex justify-center mb-3">
-            <div className="w-12 h-12 bg-[#1c39bb] border border-[#4682b4]/50 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm">
-              OJ
-            </div>
+            <img 
+              src="/organismo_judicial_badge.svg" 
+              alt="Organismo Judicial de Guatemala" 
+              className="w-16 h-16 object-contain rounded-2xl shadow-md border border-slate-700/80 bg-slate-950/40 p-1"
+            />
           </div>
           
           <h2 className="text-base font-bold uppercase tracking-wider text-white">

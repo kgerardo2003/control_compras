@@ -778,16 +778,23 @@ export const ReportsView: React.FC = () => {
       
       {/* 1. Encabezado del Módulo de Reportes de Control */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4 print:hidden">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-            <h2 className="text-lg font-black tracking-tight text-slate-900">
-              Centro de Control y Reportes de Adquisiciones
-            </h2>
+        <div className="flex items-center gap-3">
+          <img 
+            src="/organismo_judicial_badge.svg" 
+            alt="Organismo Judicial de Guatemala" 
+            className="w-12 h-12 object-contain rounded-xl shadow-xs border border-slate-700/80 bg-slate-900 p-0.5 shrink-0" 
+          />
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+              <h2 className="text-lg font-black tracking-tight text-slate-900">
+                Centro de Control y Reportes de Adquisiciones
+              </h2>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5 max-w-2xl">
+              Organismo Judicial de Guatemala • Informes oficiales para fiscalización, auditoría preventiva, control de hoja de ruta y análisis presupuestario.
+            </p>
           </div>
-          <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-            Informes oficiales para fiscalización, auditoría preventiva, control de hoja de ruta y análisis presupuestario del Organismo Judicial.
-          </p>
         </div>
 
         {/* Acciones de Descarga e Impresión */}

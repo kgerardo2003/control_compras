@@ -151,9 +151,11 @@ export const PurchaseDetailModal: React.FC = () => {
           {/* Cabecera Institucional del Modal (Professional Polish) */}
           <div className="bg-slate-900 p-4 text-white flex items-center justify-between border-b border-slate-800">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-amber-500 rounded flex items-center justify-center text-slate-900 font-bold text-xs">
-                OJ
-              </div>
+              <img 
+                src="/organismo_judicial_badge.svg" 
+                alt="Organismo Judicial de Guatemala" 
+                className="w-10 h-10 object-contain rounded-xl shadow-xs border border-slate-700/80 bg-slate-950/40 p-0.5 shrink-0"
+              />
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs font-bold text-amber-400">
@@ -255,6 +257,32 @@ export const PurchaseDetailModal: React.FC = () => {
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 </button>
               )}
+            </div>
+
+            {/* Membrete Institucional Oficial del Organismo Judicial */}
+            <div className="bg-slate-900 text-white p-3.5 rounded-xl border border-slate-800 shadow-xs flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img 
+                  src="/organismo_judicial_badge.svg" 
+                  alt="Organismo Judicial de Guatemala" 
+                  className="w-12 h-12 object-contain rounded-xl shadow-xs border border-slate-700/80 bg-slate-950/40 p-0.5 shrink-0"
+                />
+                <div>
+                  <h3 className="text-xs font-black tracking-wider uppercase text-white font-['Cinzel',serif]">
+                    ORGANISMO JUDICIAL DE GUATEMALA
+                  </h3>
+                  <p className="text-[11px] font-bold text-amber-400">
+                    Departamento de Compras • Expediente Oficial {selectedPurchase.f56e}
+                  </p>
+                  <p className="text-[10px] text-slate-300">
+                    Control de Adquisición • NOG: {selectedPurchase.nog || 'Sin NOG'}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right hidden sm:block border-l border-slate-700/80 pl-3">
+                <span className="text-[9px] uppercase font-bold text-amber-400 block tracking-wider">Estado Actual</span>
+                <span className="text-xs font-mono font-bold text-white block">{selectedPurchase.estatusEvento}</span>
+              </div>
             </div>
 
             {/* Banner de Estado y Monto */}
